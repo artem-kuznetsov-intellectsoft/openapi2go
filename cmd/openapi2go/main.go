@@ -21,5 +21,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%+v\n", spec.Paths["/customer"].Post)
+	fmt.Printf("%+v\n", spec)
 }
