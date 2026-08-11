@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	data, err := os.ReadFile("api/customer.post.json")
+	data, err := os.ReadFile("api/openapi.json")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to read openapi.json:", err)
 		os.Exit(1)
