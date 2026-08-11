@@ -1,0 +1,122 @@
+{
+  "components": {
+    "schemas": {
+      "CustomerDetailCompanyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Customer unique identifier"
+          },
+          "externalId": {
+            "type": "object",
+            "nullable": true,
+            "description": "External ID assigned by Superclient"
+          },
+          "name": {
+            "type": "string",
+            "description": "Customer name"
+          },
+          "physicalAddress": {
+            "type": "object",
+            "nullable": true,
+            "description": "Physical address (legacy concatenated string)"
+          },
+          "companyTaxId": {
+            "type": "object",
+            "nullable": true,
+            "description": "Company tax ID"
+          },
+          "companyRegistrationNumber": {
+            "type": "object",
+            "nullable": true,
+            "description": "Company registration number"
+          },
+          "defaultChain": {
+            "type": "object",
+            "nullable": true,
+            "description": "Default blockchain"
+          },
+          "defaultChainAddress": {
+            "type": "object",
+            "nullable": true,
+            "description": "Default blockchain address"
+          },
+          "defaultBankAddress": {
+            "type": "object",
+            "nullable": true,
+            "description": "Default bank IBAN address"
+          },
+          "customerType": {
+            "type": "string",
+            "enum": [
+              "INDIVIDUAL",
+              "COMPANY"
+            ],
+            "description": "Customer type"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Creation timestamp"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Last update timestamp"
+          },
+          "verificationStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING_VERIFICATION",
+              "APPROVED",
+              "PENDING_MANUAL_VERIFICATION",
+              "REJECTED"
+            ],
+            "description": "Verification status.",
+            "example": "PENDING_VERIFICATION"
+          },
+          "lastScreenedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "Timestamp of last screening check"
+          },
+          "vibans": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyDetailResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "physicalAddress",
+          "companyTaxId",
+          "companyRegistrationNumber",
+          "defaultChain",
+          "defaultChainAddress",
+          "defaultBankAddress",
+          "customerType",
+          "createdAt",
+          "updatedAt",
+          "verificationStatus",
+          "lastScreenedAt",
+          "vibans",
+          "addresses",
+          "company"
+        ]
+      }
+    }
+  }
+}
