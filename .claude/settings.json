@@ -1,9 +1,4 @@
 {
-  "skillOverrides": {
-    "codebase-memory": "off",
-    "hello-greeter": "off",
-    "openapi-go-schema-generator": "off"
-  },
   "hooks": {
     "PreToolUse": [
       {
