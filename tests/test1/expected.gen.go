@@ -1,5 +1,8 @@
 package tests
 
+// CustomerDetailCompanyResponseDto represetns 
+// a schema components.schemas.CustomerDetailCompanyResponseDto 
+// from components.schemas.CustomerDetailCompanyResponseDto.json.
 type CustomerDetailCompanyResponseDto struct {
 	Id           string                   `json:"id"`
 	ExternalId   map[string]string        `json:"externalId"`
