@@ -1,4 +1,4 @@
-package examples
+package tests
 
 type CustomerDetailCompanyResponseDto struct {
 	Id           string                   `json:"id"`
