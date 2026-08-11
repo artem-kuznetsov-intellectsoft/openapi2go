@@ -1,0 +1,256 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "object",
+      "nullable": true
+    },
+    "jurisdictionCountryCode": {
+      "type": "object",
+      "nullable": true
+    },
+    "registrationNumber": {
+      "type": "object",
+      "nullable": true
+    },
+    "taxId": {
+      "type": "object",
+      "nullable": true
+    },
+    "email": {
+      "type": "object",
+      "nullable": true
+    },
+    "phone": {
+      "type": "object",
+      "nullable": true
+    },
+    "website": {
+      "type": "object",
+      "nullable": true
+    },
+    "kybVerificationLink": {
+      "type": "string",
+      "maxLength": 1024
+    },
+    "compliance": {
+      "nullable": true,
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/CompanyComplianceResponseDto"
+        }
+      ]
+    },
+    "brandName": {
+      "type": "object",
+      "nullable": true,
+      "description": "Commercial / brand name (if distinct from legal name)"
+    },
+    "legalForm": {
+      "type": "string",
+      "nullable": true,
+      "enum": [
+        "LISTED_PUBLIC_COMPANY",
+        "REGULATED_FINANCIAL_INSTITUTION",
+        "REGULATED_INVESTMENT_FUND",
+        "PRIVATE_LIMITED_COMPANY",
+        "PUBLIC_LIMITED_COMPANY",
+        "COOPERATIVE_MUTUAL_ENTITY",
+        "PARTNERSHIP_CIVIL_COMPANY",
+        "FOREIGN_BRANCH",
+        "HOLDING_SPV",
+        "TRUST_OR_SIMILAR_ARRANGEMENT",
+        "FOUNDATION_OR_ENDOWMENT",
+        "NON_PROFIT_ASSOCIATION_NGO",
+        "GOVERNMENT_PUBLIC_AUTHORITY",
+        "STATE_OWNED_ENTERPRISE",
+        "OTHER",
+        "SOLE_PROPRIETORSHIP"
+      ],
+      "description": "Legal form code; OTHER falls back to `legalFormOther`"
+    },
+    "legalFormOther": {
+      "type": "object",
+      "nullable": true,
+      "description": "Free-text legal form when `legalForm = OTHER`"
+    },
+    "registrationDate": {
+      "type": "object",
+      "nullable": true,
+      "format": "date",
+      "description": "Date the legal entity was registered"
+    },
+    "sector": {
+      "type": "string",
+      "nullable": true,
+      "enum": [
+        "AGRICULTURE_FORESTRY_FISHING",
+        "MINING_QUARRYING_EXTRACTIVES",
+        "MANUFACTURING_GENERAL",
+        "TEXTILES_CLOTHING_LEATHER_MANUFACTURING",
+        "ENERGY_UTILITIES",
+        "CONSTRUCTION_PUBLIC_WORKS",
+        "WHOLESALE_RETAIL_GENERAL",
+        "PRECIOUS_METALS_JEWELLERY_ART_ANTIQUES",
+        "MOTOR_VEHICLE_BOAT_LUXURY_GOODS",
+        "TRANSPORT_LOGISTICS",
+        "POSTAL_COURIER_VALUE_TRANSFER",
+        "ACCOMMODATION_FOOD_SERVICE",
+        "INFORMATION_IT_COMMUNICATION",
+        "FINANCIAL_INSURANCE_SERVICES",
+        "MONEY_SERVICES_CURRENCY_EXCHANGE",
+        "CRYPTO_ASSET_SERVICES",
+        "REAL_ESTATE",
+        "LEGAL_ACCOUNTING_AUDIT_ADVISORY",
+        "OTHER_PROFESSIONAL_SCIENTIFIC_TECHNICAL",
+        "ADMINISTRATIVE_SUPPORT_SERVICES",
+        "GAMBLING_BETTING_CASINOS",
+        "ARTS_ENTERTAINMENT_RECREATION_OTHER",
+        "ARMS_DEFENCE_DUAL_USE_GOODS",
+        "PUBLIC_ADMIN_EDUCATION_HEALTH_SOCIAL",
+        "PERSONAL_HOUSEHOLD_SERVICES",
+        "OTHER"
+      ],
+      "description": "NACE level-1 sector; OTHER falls back to `sectorOther`"
+    },
+    "sectorOther": {
+      "type": "object",
+      "nullable": true,
+      "description": "Free-text sector when `sector = OTHER`"
+    },
+    "activityDescription": {
+      "type": "object",
+      "nullable": true,
+      "description": "Free-narrative business activity description"
+    },
+    "crsClassification": {
+      "type": "string",
+      "nullable": true,
+      "enum": [
+        "ACTIVE_NFE",
+        "PASSIVE_NFE",
+        "FINANCIAL_INSTITUTION"
+      ],
+      "description": "CRS classification (ACTIVE_NFE / PASSIVE_NFE / FINANCIAL_INSTITUTION)"
+    },
+    "taxResidenceCountryCode": {
+      "type": "object",
+      "nullable": true,
+      "description": "ISO 3166-1 alpha-2 country code of tax residence"
+    },
+    "tin": {
+      "type": "object",
+      "nullable": true,
+      "description": "TIN. Required when `taxResidenceCountryCode != FR`."
+    },
+    "preferredBankAccount": {
+      "type": "object",
+      "nullable": true,
+      "description": "Preferred bank account for incoming settlements"
+    },
+    "preferredWalletChain": {
+      "type": "string",
+      "nullable": true,
+      "enum": [
+        "RIPPLE",
+        "ETHEREUM",
+        "POLYGON",
+        "AVALANCHE",
+        "PLASMA",
+        "SOLANA",
+        "P_LAYER"
+      ],
+      "description": "Preferred wallet chain for incoming settlements"
+    },
+    "preferredWalletAddress": {
+      "type": "object",
+      "nullable": true,
+      "description": "Preferred wallet address for incoming settlements"
+    },
+    "capacity": {
+      "type": "string",
+      "nullable": true,
+      "enum": [
+        "OWN_ACCOUNT",
+        "THIRD_PARTY_FUNDS"
+      ]
+    },
+    "physicalAddress": {
+      "nullable": true,
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/PhysicalAddressResponseDto"
+        }
+      ]
+    },
+    "createdAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "legalRepresentatives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/CompanyIndividualResponseDto"
+      }
+    },
+    "ubos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/CompanyUboResponseDto"
+      }
+    },
+    "tcAcceptances": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/TcAcceptanceResponseDto"
+      }
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/DocumentResponseDto"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "jurisdictionCountryCode",
+    "registrationNumber",
+    "taxId",
+    "email",
+    "phone",
+    "website",
+    "kybVerificationLink",
+    "compliance",
+    "brandName",
+    "legalForm",
+    "legalFormOther",
+    "registrationDate",
+    "sector",
+    "sectorOther",
+    "activityDescription",
+    "crsClassification",
+    "taxResidenceCountryCode",
+    "tin",
+    "preferredBankAccount",
+    "preferredWalletChain",
+    "preferredWalletAddress",
+    "capacity",
+    "physicalAddress",
+    "createdAt",
+    "updatedAt",
+    "legalRepresentatives",
+    "ubos",
+    "tcAcceptances",
+    "documents"
+  ]
+}

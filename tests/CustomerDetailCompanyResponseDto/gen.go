@@ -16,4 +16,9 @@ const (
 	CustomerTypeCOMPANY    CustomerType = "COMPANY"
 )
 
-type CompanyDetailResponseDto struct{}
+type CompanyDetailResponseDto struct {
+	TaxId                map[string]string              `json:"jurisdictionCountryCode"`
+	LegalRepresentatives []CompanyIndividualResponseDto `json:"legalRepresentatives"`
+}
+
+type CompanyIndividualResponseDto struct{}
