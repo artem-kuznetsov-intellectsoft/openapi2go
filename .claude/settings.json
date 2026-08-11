@@ -1,0 +1,21 @@
+{
+  "skillOverrides": {
+    "codebase-memory": "off",
+    "hello-greeter": "off",
+    "openapi-go-schema-generator": "off"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/prevent-spec-reads.sh",
+            "args": []
+          }
+        ]
+      }
+    ]
+  }
+}
