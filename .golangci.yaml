@@ -1,0 +1,22 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - wsl
+    - gomodguard
+    - exhaustruct
+    - godox
+    - paralleltest
+    - tagliatelle
+    - testpackage
+    - noinlineerr
+formatters:
+  enable:
+    - goimports
+    - gofumpt
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/artem-kuznetsov-intellectsoft/playground
+    gofumpt:
+      extra-rules: true

@@ -102,7 +102,7 @@ type Parameter struct {
 	Explode         *bool                       `json:"explode,omitempty"`
 	AllowReserved   bool                        `json:"allowReserved,omitempty"`
 	Schema          *RefOr[*Schema]             `json:"schema,omitempty"`
-	Example         interface{}                 `json:"example,omitempty"`
+	Example         any                         `json:"example,omitempty"`
 	Examples        map[string]*RefOr[*Example] `json:"examples,omitempty"`
 	Content         map[string]*MediaType       `json:"content,omitempty"`
 }
@@ -117,7 +117,7 @@ type RequestBody struct {
 // MediaType provides schema and examples for a media type (the Media Type Object).
 type MediaType struct {
 	Schema   *RefOr[*Schema]             `json:"schema,omitempty"`
-	Example  interface{}                 `json:"example,omitempty"`
+	Example  any                         `json:"example,omitempty"`
 	Examples map[string]*RefOr[*Example] `json:"examples,omitempty"`
 	Encoding map[string]*Encoding        `json:"encoding,omitempty"`
 }
@@ -174,7 +174,7 @@ type Schema struct {
 	MaxProperties        *uint64                    `json:"maxProperties,omitempty"`
 	MinProperties        *uint64                    `json:"minProperties,omitempty"`
 	Required             []string                   `json:"required,omitempty"`
-	Enum                 []interface{}              `json:"enum,omitempty"`
+	Enum                 []any                      `json:"enum,omitempty"`
 	Type                 string                     `json:"type,omitempty"`
 	AllOf                []*RefOr[*Schema]          `json:"allOf,omitempty"`
 	OneOf                []*RefOr[*Schema]          `json:"oneOf,omitempty"`
@@ -182,10 +182,10 @@ type Schema struct {
 	Not                  *RefOr[*Schema]            `json:"not,omitempty"`
 	Items                *RefOr[*Schema]            `json:"items,omitempty"`
 	Properties           map[string]*RefOr[*Schema] `json:"properties,omitempty"`
-	AdditionalProperties interface{}                `json:"additionalProperties,omitempty"` // boolean or *RefOr[*Schema]
+	AdditionalProperties any                        `json:"additionalProperties,omitempty"` // boolean or *RefOr[*Schema]
 	Description          string                     `json:"description,omitempty"`
 	Format               string                     `json:"format,omitempty"`
-	Default              interface{}                `json:"default,omitempty"`
+	Default              any                        `json:"default,omitempty"`
 
 	// OpenAPI Extensions
 	Nullable      bool                   `json:"nullable,omitempty"`
@@ -194,7 +194,7 @@ type Schema struct {
 	WriteOnly     bool                   `json:"writeOnly,omitempty"`
 	XML           *XML                   `json:"xml,omitempty"`
 	ExternalDocs  *ExternalDocumentation `json:"externalDocs,omitempty"`
-	Example       interface{}            `json:"example,omitempty"`
+	Example       any                    `json:"example,omitempty"`
 	Deprecated    bool                   `json:"deprecated,omitempty"`
 }
 
@@ -217,10 +217,10 @@ type ExternalDocumentation struct {
 
 // Example represents a parameter or media type example (the Example Object).
 type Example struct {
-	Summary       string      `json:"summary,omitempty"`
-	Description   string      `json:"description,omitempty"`
-	Value         interface{} `json:"value,omitempty"`
-	ExternalValue string      `json:"externalValue,omitempty"`
+	Summary       string `json:"summary,omitempty"`
+	Description   string `json:"description,omitempty"`
+	Value         any    `json:"value,omitempty"`
+	ExternalValue string `json:"externalValue,omitempty"`
 }
 
 // Header describes a single response header (the Header Object).
@@ -231,7 +231,7 @@ type Header struct {
 	Style       string                      `json:"style,omitempty"`
 	Explode     *bool                       `json:"explode,omitempty"`
 	Schema      *RefOr[*Schema]             `json:"schema,omitempty"`
-	Example     interface{}                 `json:"example,omitempty"`
+	Example     any                         `json:"example,omitempty"`
 	Examples    map[string]*RefOr[*Example] `json:"examples,omitempty"`
 	Content     map[string]*MediaType       `json:"content,omitempty"`
 }
@@ -253,12 +253,12 @@ type XML struct {
 
 // Link represents a design-time relationship between a response and another operation (the Link Object).
 type Link struct {
-	OperationRef string                 `json:"operationRef,omitempty"`
-	OperationID  string                 `json:"operationId,omitempty"`
-	Parameters   map[string]interface{} `json:"parameters,omitempty"`
-	RequestBody  interface{}            `json:"requestBody,omitempty"`
-	Description  string                 `json:"description,omitempty"`
-	Server       *Server                `json:"server,omitempty"`
+	OperationRef string         `json:"operationRef,omitempty"`
+	OperationID  string         `json:"operationId,omitempty"`
+	Parameters   map[string]any `json:"parameters,omitempty"`
+	RequestBody  any            `json:"requestBody,omitempty"`
+	Description  string         `json:"description,omitempty"`
+	Server       *Server        `json:"server,omitempty"`
 }
 
 // SecurityScheme defines a security mechanism (the Security Scheme Object).
@@ -309,6 +309,7 @@ func (r *RefOr[T]) MarshalJSON() ([]byte, error) {
 			Ref: r.Ref,
 		})
 	}
+
 	return json.Marshal(r.Value)
 }
 
@@ -319,7 +320,9 @@ func (r *RefOr[T]) UnmarshalJSON(data []byte) error {
 	}
 	if err := json.Unmarshal(data, &refOnly); err == nil && refOnly.Ref != "" {
 		r.Ref = refOnly.Ref
+
 		return nil
 	}
+
 	return json.Unmarshal(data, &r.Value)
 }
