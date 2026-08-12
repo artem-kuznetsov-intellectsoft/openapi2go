@@ -65,6 +65,16 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/PolymorphicCat/PolymorphicCat.json",
 			refFile:   "testdata/PolymorphicCat/generated.ref.go",
 		},
+		{
+			name:      "PolymorphicPet",
+			inputFile: "testdata/PolymorphicPet/PolymorphicPet.json",
+			refFile:   "testdata/PolymorphicPet/generated.ref.go",
+		},
+		{
+			name:      "NullableFields",
+			inputFile: "testdata/NullableFields/NullableFields.json",
+			refFile:   "testdata/NullableFields/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {
