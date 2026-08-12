@@ -1,12 +1,6 @@
 package generated
 
-import (
-	"time"
-)
-
-// ==========================================
-// 1. Enum Definitions & Constant Options
-// ==========================================
+import "time"
 
 type Capacity string
 
@@ -15,6 +9,7 @@ const (
 	CapacityTHIRD_PARTY_FUNDS Capacity = "THIRD_PARTY_FUNDS"
 )
 
+// CrsClassification represents the cRS classification (ACTIVE_NFE / PASSIVE_NFE / FINANCIAL_INSTITUTION).
 type CrsClassification string
 
 const (
@@ -23,6 +18,7 @@ const (
 	CrsClassificationFINANCIAL_INSTITUTION CrsClassification = "FINANCIAL_INSTITUTION"
 )
 
+// LegalForm represents the legal form code; OTHER falls back to `legalFormOther`.
 type LegalForm string
 
 const (
@@ -44,6 +40,7 @@ const (
 	LegalFormSOLE_PROPRIETORSHIP             LegalForm = "SOLE_PROPRIETORSHIP"
 )
 
+// PreferredWalletChain represents the preferred wallet chain for incoming settlements.
 type PreferredWalletChain string
 
 const (
@@ -56,6 +53,7 @@ const (
 	PreferredWalletChainP_LAYER   PreferredWalletChain = "P_LAYER"
 )
 
+// Sector represents the nACE level-1 sector; OTHER falls back to `sectorOther`.
 type Sector string
 
 const (
@@ -87,21 +85,19 @@ const (
 	SectorOTHER                                   Sector = "OTHER"
 )
 
-// ==========================================
-// 2. Reference Placeholders
-// ==========================================
-
 type CompanyComplianceResponseDto struct{}
-type CompanyIndividualResponseDto struct{}
-type CompanyUboResponseDto struct{}
-type TcAcceptanceResponseDto struct{}
+
 type DocumentResponseDto struct{}
+
+type CompanyIndividualResponseDto struct{}
+
 type PhysicalAddressResponseDto struct{}
 
-// ==========================================
-// 3. Main Data Transfer Object (DTO)
-// ==========================================
+type TcAcceptanceResponseDto struct{}
 
+type CompanyUboResponseDto struct{}
+
+// CompanyDetailResponseDto is generated from components.schemas.CompanyDetailResponseDto.
 type CompanyDetailResponseDto struct {
 	ActivityDescription     map[string]any                 `json:"activityDescription"`
 	BrandName               map[string]any                 `json:"brandName"`
