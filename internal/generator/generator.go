@@ -30,6 +30,7 @@ type structDef struct {
 	name    string
 	comment string
 	fields  []fieldDef
+	alias   string // if set, this schema renders as "type name = alias" instead of a struct
 }
 
 type generator struct {
@@ -37,10 +38,11 @@ type generator struct {
 	generated map[string]bool
 	enumIndex map[string]*enumDef
 
-	enums     []*enumDef
-	structs   []*structDef
-	usesTime  bool
-	usesOneOf bool
+	enums             []*enumDef
+	structs           []*structDef
+	usesTime          bool
+	usesOneOf         bool
+	usesDiscriminated bool
 }
 
 // Generate renders Go source declaring one struct per schema under
@@ -90,6 +92,16 @@ func (g *generator) resolveNamedType(name string) string {
 		return name
 	}
 
+	if alias, ok := g.discriminatedAlias(name, schema); ok {
+		g.structs = append(g.structs, &structDef{
+			name:    name,
+			comment: fmt.Sprintf("%s is generated from components.schemas.%s.", name, name),
+			alias:   alias,
+		})
+
+		return name
+	}
+
 	fields := g.buildFields(schema)
 	g.structs = append(g.structs, &structDef{
 		name:    name,
@@ -98,6 +110,22 @@ func (g *generator) resolveNamedType(name string) string {
 	})
 
 	return name
+}
+
+// discriminatedAlias reports whether schema is a pure discriminated union —
+// a oneOf of exactly two $ref members with an adjacent discriminator object
+// and no properties/allOf of its own — and if so, returns the Go type
+// expression it should alias to (openapi.Discriminated[A, B]).
+func (g *generator) discriminatedAlias(name string, schema *openapi.Schema) (string, bool) {
+	if schema.Discriminator == nil || len(schema.OneOf) != 2 || len(schema.Properties) > 0 || len(schema.AllOf) > 0 {
+		return "", false
+	}
+
+	typA, _ := g.resolveRefOrType(name, schema.OneOf[0])
+	typB, _ := g.resolveRefOrType(name, schema.OneOf[1])
+	g.usesDiscriminated = true
+
+	return fmt.Sprintf("openapi.Discriminated[%s, %s]", typA, typB), true
 }
 
 // fieldCollector accumulates the pieces buildFields needs while walking a
@@ -261,7 +289,7 @@ func (g *generator) render(pkgName string) string {
 	if g.usesTime {
 		imports = append(imports, `"time"`)
 	}
-	if g.usesOneOf {
+	if g.usesOneOf || g.usesDiscriminated {
 		imports = append(imports, `"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"`)
 	}
 
@@ -294,6 +322,11 @@ func (g *generator) render(pkgName string) string {
 	for _, s := range g.structs {
 		if s.comment != "" {
 			fmt.Fprintf(&b, "// %s\n", s.comment)
+		}
+
+		if s.alias != "" {
+			fmt.Fprintf(&b, "type %s = %s\n\n", s.name, s.alias)
+			continue
 		}
 
 		if len(s.fields) == 0 {
