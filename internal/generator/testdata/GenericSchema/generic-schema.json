@@ -267,6 +267,112 @@
             "type": "string"
           }
         }
+      },
+      "OneOfPrimitives": {
+        "type": "object",
+        "description": "Tests validation and code generation of a field that can be one of multiple primitive types (string or integer). This helps verify how the generator parses JSON values into dual-type or empty-interface containers in Go.",
+        "properties": {
+          "id_or_code": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer",
+                "format": "int64"
+              }
+            ],
+            "description": "An identifier that can be either a string UUID/alphanumeric code or a 64-bit integer index."
+          }
+        }
+      },
+      "OneOfObjectsWithoutDiscriminator": {
+        "type": "object",
+        "description": "Tests handling of oneOf where the possible options are either a simple primitive string or a complex referenced object, without an explicit discriminator. This requires the Go parser to try-unmarshal in order or inspect the type.",
+        "properties": {
+          "assigned_to": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Just the raw username string."
+              },
+              {
+                "$ref": "#/components/schemas/SimpleUser"
+              }
+            ],
+            "description": "The assignee, which can be either a plain string username or a full SimpleUser object."
+          }
+        }
+      },
+      "Vehicle": {
+        "type": "object",
+        "description": "A polymorphic parent model using oneOf together with an adjacent discriminator object.",
+        "discriminator": {
+          "propertyName": "vehicle_type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Car"
+          },
+          {
+            "$ref": "#/components/schemas/Bicycle"
+          }
+        ]
+      },
+      "Car": {
+        "type": "object",
+        "required": [
+          "vehicle_type",
+          "license_plate"
+        ],
+        "properties": {
+          "vehicle_type": {
+            "type": "string"
+          },
+          "license_plate": {
+            "type": "string"
+          },
+          "seating_capacity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "Bicycle": {
+        "type": "object",
+        "required": [
+          "vehicle_type",
+          "has_basket"
+        ],
+        "properties": {
+          "vehicle_type": {
+            "type": "string"
+          },
+          "has_basket": {
+            "type": "boolean"
+          },
+          "frame_size": {
+            "type": "string"
+          }
+        }
+      },
+      "VehicleUnion": {
+        "type": "object",
+        "description": "A wrapper schema to test containing a polymorphic type defined with oneOf.",
+        "required": [
+          "main_vehicle"
+        ],
+        "properties": {
+          "main_vehicle": {
+            "$ref": "#/components/schemas/Vehicle"
+          },
+          "backup_vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vehicle"
+            }
+          }
+        }
       }
     }
   }
