@@ -203,6 +203,45 @@ type Schema struct {
 	Deprecated    bool                   `json:"deprecated,omitempty"`
 }
 
+// UnmarshalJSON customizes JSON deserialization for Schema so that additionalProperties
+// decodes into either a bool or a *RefOr[*Schema], per its documented union type, instead
+// of encoding/json's generic map[string]any/bool fallback for an any-typed field.
+func (s *Schema) UnmarshalJSON(data []byte) error {
+	type alias Schema
+
+	var a alias
+	if err := json.Unmarshal(data, &a); err != nil {
+		return err
+	}
+	*s = Schema(a)
+
+	var wrapper struct {
+		AdditionalProperties json.RawMessage `json:"additionalProperties,omitempty"`
+	}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+
+	if len(wrapper.AdditionalProperties) == 0 {
+		return nil
+	}
+
+	var b bool
+	if err := json.Unmarshal(wrapper.AdditionalProperties, &b); err == nil {
+		s.AdditionalProperties = b
+
+		return nil
+	}
+
+	var ref RefOr[*Schema]
+	if err := json.Unmarshal(wrapper.AdditionalProperties, &ref); err != nil {
+		return err
+	}
+	s.AdditionalProperties = &ref
+
+	return nil
+}
+
 // SecurityRequirement lists the required security schemes (the Security Requirement Object).
 // Each key corresponds to a Security Scheme declared in Components.
 type SecurityRequirement map[string][]string

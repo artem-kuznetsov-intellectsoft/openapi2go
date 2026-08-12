@@ -189,6 +189,12 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 
 	switch schema.Type {
 	case "object":
+		if ref, ok := schema.AdditionalProperties.(*openapi.RefOr[*openapi.Schema]); ok && ref != nil {
+			valType, _ := g.resolveRefOrType(propName, ref)
+
+			return "map[string]" + valType, nullable
+		}
+
 		return "map[string]any", nullable
 	case "array":
 		itemType := "any"

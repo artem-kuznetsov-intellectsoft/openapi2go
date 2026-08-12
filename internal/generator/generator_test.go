@@ -75,6 +75,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/NullableFields/NullableFields.json",
 			refFile:   "testdata/NullableFields/generated.ref.go",
 		},
+		{
+			name:      "MapsAndDictionaries",
+			inputFile: "testdata/MapsAndDictionaries/MapsAndDictionaries.json",
+			refFile:   "testdata/MapsAndDictionaries/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {
