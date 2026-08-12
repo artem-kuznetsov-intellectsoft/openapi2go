@@ -90,6 +90,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/Vehicle/Vehicle.json",
 			refFile:   "testdata/Vehicle/generated.ref.go",
 		},
+		{
+			name:      "VehicleUnion",
+			inputFile: "testdata/VehicleUnion/VehicleUnion.json",
+			refFile:   "testdata/VehicleUnion/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {
