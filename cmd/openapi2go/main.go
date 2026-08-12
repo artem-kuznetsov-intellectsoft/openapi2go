@@ -5,12 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/internal/generator"
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 )
 
-const usage = "usage: openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]"
+const usage = "usage: openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]\n       openapi2go version"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -21,10 +22,34 @@ func main() {
 	switch os.Args[1] {
 	case "generate":
 		runGenerate(os.Args[2:])
+	case "version":
+		runVersion()
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q\n%s\n", os.Args[1], usage)
 		os.Exit(1)
 	}
+}
+
+// runVersion prints the short commit hash Go's toolchain stamps into the
+// binary from VCS info at build time (go install/build from a git checkout),
+// available via debug.ReadBuildInfo without any custom ldflags.
+func runVersion() {
+	revision := "unknown"
+
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				revision = s.Value
+				if len(revision) > 7 {
+					revision = revision[:7]
+				}
+
+				break
+			}
+		}
+	}
+
+	fmt.Println(revision)
 }
 
 // reorderFlagsFirst moves recognized valued flags (and their values) to the
