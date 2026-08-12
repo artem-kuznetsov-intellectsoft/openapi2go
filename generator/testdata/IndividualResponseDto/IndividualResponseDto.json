@@ -1,0 +1,183 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "IndividualResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Jean"
+          },
+          "middleName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Marie"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Dupont"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "nullable": true,
+            "format": "date",
+            "example": "1990-01-15"
+          },
+          "placeOfBirthCity": {
+            "type": "string",
+            "nullable": true,
+            "example": "Paris"
+          },
+          "placeOfBirthCountryCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "FR"
+          },
+          "nationalities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "FR",
+              "IT"
+            ]
+          },
+          "residenceCountryCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "FR"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "example": "jean.dupont@dupont-fils.fr"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+33612345678"
+          },
+          "documentType": {
+            "type": "string",
+            "nullable": true,
+            "example": "PASSPORT"
+          },
+          "documentNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "FR12AB34567"
+          },
+          "documentCountryCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "FR"
+          },
+          "documentExpiry": {
+            "type": "string",
+            "nullable": true,
+            "format": "date",
+            "example": "2030-12-31"
+          },
+          "taxResidences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "countryCode": {
+                  "type": "string"
+                },
+                "tin": {
+                  "type": "string"
+                }
+              }
+            },
+            "example": [
+              {
+                "countryCode": "FR",
+                "tin": "FR1234567890"
+              }
+            ]
+          },
+          "isSoleTrader": {
+            "type": "boolean",
+            "nullable": false,
+            "example": false
+          },
+          "kycVerificationLink": {
+            "type": "string",
+            "nullable": false,
+            "maxLength": 1024
+          },
+          "livenessLink": {
+            "type": "string",
+            "nullable": false,
+            "maxLength": 1024
+          },
+          "compliance": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IndividualComplianceResponseDto"
+              }
+            ]
+          },
+          "physicalAddress": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PhysicalAddressResponseDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "middleName",
+          "lastName",
+          "dateOfBirth",
+          "placeOfBirthCity",
+          "placeOfBirthCountryCode",
+          "nationalities",
+          "residenceCountryCode",
+          "email",
+          "phone",
+          "documentType",
+          "documentNumber",
+          "documentCountryCode",
+          "documentExpiry",
+          "taxResidences",
+          "isSoleTrader",
+          "kycVerificationLink",
+          "livenessLink",
+          "compliance",
+          "physicalAddress",
+          "createdAt",
+          "updatedAt"
+        ]
+      }
+    }
+  }
+}
