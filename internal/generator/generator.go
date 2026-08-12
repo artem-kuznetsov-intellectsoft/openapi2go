@@ -276,7 +276,7 @@ func (g *generator) render(pkgName string) string {
 
 		b.WriteString("const (\n")
 		for _, v := range e.values {
-			fmt.Fprintf(&b, "%s%s %s = %q\n", e.name, v, e.name, v)
+			fmt.Fprintf(&b, "%s%s %s = %q\n", e.name, capitalizeFirst(v), e.name, v)
 		}
 		b.WriteString(")\n\n")
 	}
@@ -359,6 +359,21 @@ func toPascalCase(s string) string {
 	}
 
 	return b.String()
+}
+
+// capitalizeFirst upper-cases the first rune of s, leaving the rest as-is —
+// used to turn enum values like "aggressive" into valid, exported const
+// name suffixes without disturbing already-uppercase values like
+// "PENDING_VERIFICATION".
+func capitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+
+	return string(r)
 }
 
 // describeSentence lowercases the first letter of a description and strips

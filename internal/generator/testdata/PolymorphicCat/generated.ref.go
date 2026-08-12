@@ -3,9 +3,9 @@ package generated
 type HuntingSkill string
 
 const (
-	HuntingSkilllazy       HuntingSkill = "lazy"
-	HuntingSkillclueless   HuntingSkill = "clueless"
-	HuntingSkillaggressive HuntingSkill = "aggressive"
+	HuntingSkillLazy       HuntingSkill = "lazy"
+	HuntingSkillClueless   HuntingSkill = "clueless"
+	HuntingSkillAggressive HuntingSkill = "aggressive"
 )
 
 // PolymorphicPet is generated from components.schemas.PolymorphicPet.
