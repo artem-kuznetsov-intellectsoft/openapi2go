@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/artem-kuznetsov-intellectsoft/openapi2go/internal/generator"
+	"github.com/artem-kuznetsov-intellectsoft/openapi2go/generator"
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 )
 

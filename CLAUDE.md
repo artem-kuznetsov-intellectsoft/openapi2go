@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Go code generator that converts OpenAPI 3.0.x component schemas into Go struct/enum
 declarations. `openapi/schema.go` is a hand-written struct model of the OpenAPI 3.0.x Object
-tree (unmarshaled via `encoding/json`); `internal/generator` walks `components.schemas` in that
+tree (unmarshaled via `encoding/json`); `generator` walks `components.schemas` in that
 model and emits formatted Go source.
 
 ## Commands
@@ -15,7 +15,7 @@ model and emits formatted Go source.
 go build ./...
 go vet ./...
 go test ./...
-go test ./internal/generator -run TestGenerate/CompanyDetailResponseDto -v  # single test
+go test ./generator -run TestGenerate/CompanyDetailResponseDto -v            # single test
 golangci-lint run                                                            # lint (config: .golangci.yaml)
 gofmt -l .                                                                   # formatting check
 ```
@@ -31,7 +31,7 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 - **`openapi/schema.go`** — the OpenAPI Object model. Anything that can be either an inline
   object or a `$ref` string (schemas, parameters, responses, etc.) is wrapped in the generic
   `RefOr[T]`, which has custom `MarshalJSON`/`UnmarshalJSON` to round-trip either form.
-- **`internal/generator/generator.go`** — the actual OpenAPI→Go translation. A single
+- **`generator/generator.go`** — the actual OpenAPI→Go translation. A single
   unexported `generator` struct accumulates `structDef`/`enumDef` entries while walking schemas,
   then `render` emits source text that is passed through `go/format.Source` before being
   returned. Key behaviors baked into this code (see also the type-mapping rules in `README.md`):
@@ -55,7 +55,7 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 
 ## Testing pattern
 
-Generator tests (`internal/generator/generator_test.go`) are golden-file tests: each case reads
+Generator tests (`generator/generator_test.go`) are golden-file tests: each case reads
 an input fixture OpenAPI document from `testdata/<Case>/`, runs `Generate`, and diffs
 (`go-cmp`) the result against a `generated.ref.go` file in the same directory. When adding a new
 generator behavior, add a new `testdata/<Case>/` fixture pair rather than asserting inline —
