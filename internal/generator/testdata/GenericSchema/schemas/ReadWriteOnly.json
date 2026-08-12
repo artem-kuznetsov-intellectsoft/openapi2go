@@ -1,0 +1,33 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ReadWriteOnly": {
+        "type": "object",
+        "description": "Tests readOnly and writeOnly property flags. Some generators produce separate request/response structs based on these flags.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Response-only field. Should be present in response struct, omitted or ignored in write requests."
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true,
+            "description": "Request-only field. Should be present in write requests, omitted or ignored in responses."
+          },
+          "normal_field": {
+            "type": "string",
+            "description": "Standard read-write field."
+          }
+        }
+      }
+    }
+  }
+}

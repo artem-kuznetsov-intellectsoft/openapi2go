@@ -1,0 +1,31 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "OneOfPrimitives": {
+        "type": "object",
+        "description": "Tests validation and code generation of a field that can be one of multiple primitive types (string or integer). This helps verify how the generator parses JSON values into dual-type or empty-interface containers in Go.",
+        "properties": {
+          "id_or_code": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer",
+                "format": "int64"
+              }
+            ],
+            "description": "An identifier that can be either a string UUID/alphanumeric code or a 64-bit integer index."
+          }
+        }
+      }
+    }
+  }
+}

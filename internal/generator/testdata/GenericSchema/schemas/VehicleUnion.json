@@ -1,0 +1,83 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Bicycle": {
+        "type": "object",
+        "required": [
+          "vehicle_type",
+          "has_basket"
+        ],
+        "properties": {
+          "vehicle_type": {
+            "type": "string"
+          },
+          "has_basket": {
+            "type": "boolean"
+          },
+          "frame_size": {
+            "type": "string"
+          }
+        }
+      },
+      "Car": {
+        "type": "object",
+        "required": [
+          "vehicle_type",
+          "license_plate"
+        ],
+        "properties": {
+          "vehicle_type": {
+            "type": "string"
+          },
+          "license_plate": {
+            "type": "string"
+          },
+          "seating_capacity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "Vehicle": {
+        "type": "object",
+        "description": "A polymorphic parent model using oneOf together with an adjacent discriminator object.",
+        "discriminator": {
+          "propertyName": "vehicle_type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Car"
+          },
+          {
+            "$ref": "#/components/schemas/Bicycle"
+          }
+        ]
+      },
+      "VehicleUnion": {
+        "type": "object",
+        "description": "A wrapper schema to test containing a polymorphic type defined with oneOf.",
+        "required": [
+          "main_vehicle"
+        ],
+        "properties": {
+          "main_vehicle": {
+            "$ref": "#/components/schemas/Vehicle"
+          },
+          "backup_vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vehicle"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "NullableFields": {
+        "type": "object",
+        "description": "Tests how nullable attributes are mapped. Nullable properties must typically map to pointers in Go to differentiate between null and zero-values.",
+        "properties": {
+          "nullable_string": {
+            "type": "string",
+            "nullable": true,
+            "description": "Should map to *string"
+          },
+          "nullable_int": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "Should map to *int64"
+          },
+          "non_nullable_string": {
+            "type": "string",
+            "nullable": false,
+            "description": "Should map to string"
+          }
+        }
+      }
+    }
+  }
+}

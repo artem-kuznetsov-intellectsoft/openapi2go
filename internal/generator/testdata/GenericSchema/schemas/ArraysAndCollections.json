@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ArraysAndCollections": {
+        "type": "object",
+        "description": "Tests standard array structures containing primitives and referenced objects.",
+        "properties": {
+          "string_list": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Should map to []string"
+          },
+          "integer_list": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Should map to []int64"
+          },
+          "object_list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleUser"
+            },
+            "description": "Should map to []SimpleUser or []*SimpleUser"
+          }
+        }
+      },
+      "SimpleUser": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "OneOfObjectsWithoutDiscriminator": {
+        "type": "object",
+        "description": "Tests handling of oneOf where the possible options are either a simple primitive string or a complex referenced object, without an explicit discriminator. This requires the Go parser to try-unmarshal in order or inspect the type.",
+        "properties": {
+          "assigned_to": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Just the raw username string."
+              },
+              {
+                "$ref": "#/components/schemas/SimpleUser"
+              }
+            ],
+            "description": "The assignee, which can be either a plain string username or a full SimpleUser object."
+          }
+        }
+      },
+      "SimpleUser": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

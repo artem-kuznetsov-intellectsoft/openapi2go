@@ -1,0 +1,72 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "PrimitivesAndFormats": {
+        "type": "object",
+        "description": "Tests mapping of various primitive types and standard OAS formats to native Go types.",
+        "properties": {
+          "int32_field": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Should map to int32"
+          },
+          "int64_field": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Should map to int64"
+          },
+          "float_field": {
+            "type": "number",
+            "format": "float",
+            "description": "Should map to float32"
+          },
+          "double_field": {
+            "type": "number",
+            "format": "double",
+            "description": "Should map to float64"
+          },
+          "string_field": {
+            "type": "string",
+            "description": "Should map to string"
+          },
+          "byte_field": {
+            "type": "string",
+            "format": "byte",
+            "description": "Should map to []byte or string (base64 encoded)"
+          },
+          "binary_field": {
+            "type": "string",
+            "format": "binary",
+            "description": "Should map to []byte, string, or os.File equivalent"
+          },
+          "boolean_field": {
+            "type": "boolean",
+            "description": "Should map to bool"
+          },
+          "date_field": {
+            "type": "string",
+            "format": "date",
+            "description": "Should map to time.Time or string (RFC3339 date)"
+          },
+          "date_time_field": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Should map to time.Time (RFC3339 date-time)"
+          },
+          "password_field": {
+            "type": "string",
+            "format": "password",
+            "description": "Should map to string"
+          }
+        }
+      }
+    }
+  }
+}

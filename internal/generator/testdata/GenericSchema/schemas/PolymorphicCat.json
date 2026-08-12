@@ -1,0 +1,55 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "PolymorphicCat": {
+        "description": "Polymorphic extension of PolymorphicPet.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PolymorphicPet"
+          },
+          {
+            "type": "object",
+            "required": [
+              "hunting_skill"
+            ],
+            "properties": {
+              "hunting_skill": {
+                "type": "string",
+                "enum": [
+                  "lazy",
+                  "clueless",
+                  "aggressive"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "PolymorphicPet": {
+        "type": "object",
+        "required": [
+          "pet_type",
+          "name"
+        ],
+        "discriminator": {
+          "propertyName": "pet_type"
+        },
+        "properties": {
+          "pet_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
