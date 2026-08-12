@@ -2,7 +2,7 @@ package generated
 
 // Bicycle is generated from components.schemas.Bicycle.
 type Bicycle struct {
-	FrameSize   *string `json:"frame_size,omitempty"`
-	HasBasket   bool    `json:"has_basket"`
-	VehicleType string  `json:"vehicle_type"`
+	FrameSize   string `json:"frame_size,omitempty"`
+	HasBasket   bool   `json:"has_basket"`
+	VehicleType string `json:"vehicle_type"`
 }

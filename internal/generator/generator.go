@@ -149,7 +149,7 @@ func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Sche
 	goName := toPascalCase(propName)
 
 	typ, nullable := g.resolveRefOrType(propName, ref)
-	if (nullable || !required) && isPointerable(typ) {
+	if nullable && isPointerable(typ) {
 		typ = "*" + typ
 	}
 
