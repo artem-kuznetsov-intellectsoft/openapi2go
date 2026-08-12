@@ -1,0 +1,21 @@
+package generated
+
+type HuntingSkill string
+
+const (
+	HuntingSkilllazy       HuntingSkill = "lazy"
+	HuntingSkillclueless   HuntingSkill = "clueless"
+	HuntingSkillaggressive HuntingSkill = "aggressive"
+)
+
+// PolymorphicPet is generated from components.schemas.PolymorphicPet.
+type PolymorphicPet struct {
+	Name    string `json:"name"`
+	PetType string `json:"pet_type"`
+}
+
+// PolymorphicCat is generated from components.schemas.PolymorphicCat.
+type PolymorphicCat struct {
+	PolymorphicPet
+	HuntingSkill HuntingSkill `json:"hunting_skill"`
+}

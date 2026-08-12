@@ -60,6 +60,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/OneOfObjectsWithoutDiscriminator/OneOfObjectsWithoutDiscriminator.json",
 			refFile:   "testdata/OneOfObjectsWithoutDiscriminator/generated.ref.go",
 		},
+		{
+			name:      "PolymorphicCat",
+			inputFile: "testdata/PolymorphicCat/PolymorphicCat.json",
+			refFile:   "testdata/PolymorphicCat/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {
