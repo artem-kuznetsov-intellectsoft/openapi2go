@@ -1,0 +1,273 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI-to-Go Generator Test Cases",
+    "version": "1.0.0",
+    "description": "A collection of atomic OpenAPI 3.0 Schema Objects representing different structural variations and data types to thoroughly test a Go struct generator."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "PrimitivesAndFormats": {
+        "type": "object",
+        "description": "Tests mapping of various primitive types and standard OAS formats to native Go types.",
+        "properties": {
+          "int32_field": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Should map to int32"
+          },
+          "int64_field": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Should map to int64"
+          },
+          "float_field": {
+            "type": "number",
+            "format": "float",
+            "description": "Should map to float32"
+          },
+          "double_field": {
+            "type": "number",
+            "format": "double",
+            "description": "Should map to float64"
+          },
+          "string_field": {
+            "type": "string",
+            "description": "Should map to string"
+          },
+          "byte_field": {
+            "type": "string",
+            "format": "byte",
+            "description": "Should map to []byte or string (base64 encoded)"
+          },
+          "binary_field": {
+            "type": "string",
+            "format": "binary",
+            "description": "Should map to []byte, string, or os.File equivalent"
+          },
+          "boolean_field": {
+            "type": "boolean",
+            "description": "Should map to bool"
+          },
+          "date_field": {
+            "type": "string",
+            "format": "date",
+            "description": "Should map to time.Time or string (RFC3339 date)"
+          },
+          "date_time_field": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Should map to time.Time (RFC3339 date-time)"
+          },
+          "password_field": {
+            "type": "string",
+            "format": "password",
+            "description": "Should map to string"
+          }
+        }
+      },
+      "RequiredAndOptional": {
+        "type": "object",
+        "description": "Tests validation of required properties vs optional properties. In Go, optional fields should be marked with omitempty, whereas required fields should not.",
+        "required": [
+          "required_string",
+          "required_integer"
+        ],
+        "properties": {
+          "required_string": {
+            "type": "string"
+          },
+          "required_integer": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "optional_string": {
+            "type": "string"
+          },
+          "optional_integer": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ArraysAndCollections": {
+        "type": "object",
+        "description": "Tests standard array structures containing primitives and referenced objects.",
+        "properties": {
+          "string_list": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Should map to []string"
+          },
+          "integer_list": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Should map to []int64"
+          },
+          "object_list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleUser"
+            },
+            "description": "Should map to []SimpleUser or []*SimpleUser"
+          }
+        }
+      },
+      "MapsAndDictionaries": {
+        "type": "object",
+        "description": "Tests map/dictionary constructs via additionalProperties.",
+        "properties": {
+          "string_map": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Should map to map[string]string"
+          },
+          "object_map": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SimpleUser"
+            },
+            "description": "Should map to map[string]SimpleUser"
+          }
+        }
+      },
+      "NullableFields": {
+        "type": "object",
+        "description": "Tests how nullable attributes are mapped. Nullable properties must typically map to pointers in Go to differentiate between null and zero-values.",
+        "properties": {
+          "nullable_string": {
+            "type": "string",
+            "nullable": true,
+            "description": "Should map to *string"
+          },
+          "nullable_int": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "Should map to *int64"
+          },
+          "non_nullable_string": {
+            "type": "string",
+            "nullable": false,
+            "description": "Should map to string"
+          }
+        }
+      },
+      "ReadWriteOnly": {
+        "type": "object",
+        "description": "Tests readOnly and writeOnly property flags. Some generators produce separate request/response structs based on these flags.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Response-only field. Should be present in response struct, omitted or ignored in write requests."
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true,
+            "description": "Request-only field. Should be present in write requests, omitted or ignored in responses."
+          },
+          "normal_field": {
+            "type": "string",
+            "description": "Standard read-write field."
+          }
+        }
+      },
+      "BaseModel": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CompositionAllOf": {
+        "description": "Tests composition via allOf. This is typically mapped in Go via struct embedding.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseModel"
+          },
+          {
+            "type": "object",
+            "required": [
+              "extended_property"
+            ],
+            "properties": {
+              "extended_property": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "PolymorphicPet": {
+        "type": "object",
+        "required": [
+          "pet_type",
+          "name"
+        ],
+        "discriminator": {
+          "propertyName": "pet_type"
+        },
+        "properties": {
+          "pet_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PolymorphicCat": {
+        "description": "Polymorphic extension of PolymorphicPet.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PolymorphicPet"
+          },
+          {
+            "type": "object",
+            "required": [
+              "hunting_skill"
+            ],
+            "properties": {
+              "hunting_skill": {
+                "type": "string",
+                "enum": [
+                  "lazy",
+                  "clueless",
+                  "aggressive"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "SimpleUser": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
