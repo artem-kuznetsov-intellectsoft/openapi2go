@@ -35,6 +35,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/Bicycle/Bicycle.json",
 			refFile:   "testdata/Bicycle/generated.ref.go",
 		},
+		{
+			name:      "BaseModel",
+			inputFile: "testdata/BaseModel/BaseModel.json",
+			refFile:   "testdata/BaseModel/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {
