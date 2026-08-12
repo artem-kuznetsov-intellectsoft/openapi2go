@@ -50,6 +50,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/CompositionAllOf/CompositionAllOf.json",
 			refFile:   "testdata/CompositionAllOf/generated.ref.go",
 		},
+		{
+			name:      "OneOfPrimitives",
+			inputFile: "testdata/OneOfPrimitives/OneOfPrimitives.json",
+			refFile:   "testdata/OneOfPrimitives/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {

@@ -37,9 +37,10 @@ type generator struct {
 	generated map[string]bool
 	enumIndex map[string]*enumDef
 
-	enums    []*enumDef
-	structs  []*structDef
-	usesTime bool
+	enums     []*enumDef
+	structs   []*structDef
+	usesTime  bool
+	usesOneOf bool
 }
 
 // Generate renders Go source declaring one struct per schema under
@@ -178,6 +179,14 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 
 	nullable = schema.Nullable
 
+	if len(schema.OneOf) == 2 {
+		typA, _ := g.resolveRefOrType(propName, schema.OneOf[0])
+		typB, _ := g.resolveRefOrType(propName, schema.OneOf[1])
+		g.usesOneOf = true
+
+		return fmt.Sprintf("openapi.OneOf[%s, %s]", typA, typB), nullable
+	}
+
 	switch schema.Type {
 	case "object":
 		return "map[string]any", nullable
@@ -238,8 +247,24 @@ func (g *generator) render(pkgName string) string {
 
 	fmt.Fprintf(&b, "package %s\n\n", pkgName)
 
+	var imports []string
 	if g.usesTime {
-		b.WriteString("import \"time\"\n\n")
+		imports = append(imports, `"time"`)
+	}
+	if g.usesOneOf {
+		imports = append(imports, `"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"`)
+	}
+
+	switch len(imports) {
+	case 0:
+	case 1:
+		fmt.Fprintf(&b, "import %s\n\n", imports[0])
+	default:
+		b.WriteString("import (\n")
+		for _, imp := range imports {
+			fmt.Fprintf(&b, "%s\n", imp)
+		}
+		b.WriteString(")\n\n")
 	}
 
 	for _, e := range g.enums {
