@@ -12,8 +12,9 @@ When converting OpenAPI YAML/JSON schema definitions into Go data transfer objec
 
 #### **2. Type Mapping & Representation**
 * **Basic Strings**: Map default OpenAPI properties defined as `"type": "string"` (including special formats like `uuid`) to primitive Go `string` fields (e.g., `"id"` maps to `Id string`).
-* **Temporal Strings (Date-Time) & Nullability**: Map date-time properties (such as `"createdAt"` which has `"format": "date-time"`) to a string (`string`).
-* **Required and Nullability**: `required:false` (or just missing `required` property) or `nullable:true` means the field must be a pointer (e.g. `*string`) to natively support optionality or null values.
+* **Temporal Strings (Date-Time)**: Map date-time properties (such as `"createdAt"` which has `"format": "date-time"`) to Go's `time.Time` (e.g., `"createdAt"` maps to `CreatedAt time.Time`). Any file that generates such a field must import `"time"`.
+* **Required and Nullability**: `required:false` (or just missing `required` property) or `nullable:true` means the field must be a pointer (e.g. `*string`) to natively support optionality or null values. This pointer rule applies to scalar types (strings, numbers, booleans, enum types) and `$ref`-resolved struct types only — it does not apply to `map[string]any`, slice, or `any` fields, since those are already nil-able; for those, a missing `required` entry only adds `,omitempty` to the JSON tag.
+* **Field Ordering**: Struct fields are emitted in alphabetical order of their JSON property name, not the declaration order from the source spec. This is because Go's `encoding/json` does not preserve object key order when unmarshaling into a map, so alphabetical order is used as the deterministic fallback.
 * **Untyped Objects to Maps**: Properties defined as a generic `"type": "object"` (without a `$ref`) must be represented as a map with string keys and any values: `map[string]any` (e.g., `"externalId"` maps to `ExternalId map[string]any`).
 * **Arrays of Objects**: Properties defined as `"type": "array"` containing `"items": {"type": "object"}` must map to a slice of string-to-any maps: `[]map[string]any` (e.g., `"vibans"` maps to `Vibans []map[string]any`).
 * **Component References (`$ref`)**: When a property references another component schema (e.g., `"company": {"$ref": "#/components/schemas/CompanyDetailResponseDto"}`), type the field directly with the resolved PascalCase struct name (e.g., `Company CompanyDetailResponseDto`).
@@ -31,7 +32,7 @@ When converting OpenAPI YAML/JSON schema definitions into Go data transfer objec
 
   ```go
   const (
-      CustomerTypeIndividual CustomerType = "INDIVIDUAL"
+      CustomerTypeINDIVIDUAL CustomerType = "INDIVIDUAL"
       CustomerTypeCOMPANY    CustomerType = "COMPANY"
   )
   ```

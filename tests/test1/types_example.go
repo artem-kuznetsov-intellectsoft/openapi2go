@@ -1,4 +1,4 @@
-package test1
+package generated
 
 import "time"
 
@@ -24,21 +24,21 @@ type CompanyDetailResponseDto struct{}
 
 // CustomerDetailCompanyResponseDto is generated from components.schemas.CustomerDetailCompanyResponseDto.
 type CustomerDetailCompanyResponseDto struct {
-	Id                        string                   `json:"id"`
-	ExternalId                map[string]any           `json:"externalId,omitempty"`
-	Name                      string                   `json:"name"`
-	PhysicalAddress           map[string]any           `json:"physicalAddress"`
-	CompanyTaxId              map[string]any           `json:"companyTaxId"`
+	Addresses                 []map[string]any         `json:"addresses"`
+	Company                   CompanyDetailResponseDto `json:"company"`
 	CompanyRegistrationNumber map[string]any           `json:"companyRegistrationNumber"`
+	CompanyTaxId              map[string]any           `json:"companyTaxId"`
+	CreatedAt                 time.Time                `json:"createdAt"`
+	CustomerType              CustomerType             `json:"customerType"`
+	DefaultBankAddress        map[string]any           `json:"defaultBankAddress"`
 	DefaultChain              map[string]any           `json:"defaultChain"`
 	DefaultChainAddress       map[string]any           `json:"defaultChainAddress"`
-	DefaultBankAddress        map[string]any           `json:"defaultBankAddress"`
-	CustomerType              CustomerType             `json:"customerType"`
-	CreatedAt                 time.Time                `json:"createdAt"`
+	ExternalId                map[string]any           `json:"externalId,omitempty"`
+	Id                        string                   `json:"id"`
+	LastScreenedAt            map[string]any           `json:"lastScreenedAt"`
+	Name                      string                   `json:"name"`
+	PhysicalAddress           map[string]any           `json:"physicalAddress"`
 	UpdatedAt                 time.Time                `json:"updatedAt"`
 	VerificationStatus        VerificationStatus       `json:"verificationStatus"`
-	LastScreenedAt            any                      `json:"lastScreenedAt"`
-	Vibans                    []any                    `json:"vibans"`
-	Addresses                 []any                    `json:"addresses"`
-	Company                   CompanyDetailResponseDto `json:"company"`
+	Vibans                    []map[string]any         `json:"vibans"`
 }
