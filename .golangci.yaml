@@ -1,17 +1,29 @@
 version: "2"
 linters:
-  default: standard
+  default: all
   disable:
-    - wsl
-    - gomodguard
+    - depguard
     - exhaustruct
+    - godot
     - godox
+    - gomodguard
+    - gosec
+    - nlreturn
+    - noinlineerr
     - paralleltest
     - tagliatelle
     - testpackage
-    - noinlineerr
-    - wrapcheck
     - varnamelen
+    - wrapcheck
+    - wsl
+  exclusions:
+    rules:
+      - linters:
+          - revive
+        text: "package-comments: should have a package comment"
+      - linters:
+          - wsl_v5
+        text: "missing whitespace above this line "
 formatters:
   enable:
     - goimports
@@ -22,5 +34,5 @@ formatters:
         - github.com/artem-kuznetsov-intellectsoft/playground
     gofumpt:
       extra-rules: true
-issues:
-  new: true
+# issues:
+  # new: true
