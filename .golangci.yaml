@@ -34,5 +34,5 @@ formatters:
         - github.com/artem-kuznetsov-intellectsoft/playground
     gofumpt:
       extra-rules: true
-# issues:
-  # new: true
+issues:
+  new: true
