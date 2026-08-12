@@ -69,5 +69,5 @@ scenario is covered.
 This is a large real-world spec. A hook blocks reading it directly with the `Read` tool
 ("forbidden to prevent context window bloat") — use `jq` via Bash instead, e.g.
 `jq '.components.schemas | keys' api/openapi.json` or `jq -c '.components.schemas.Foo' api/openapi.json`.
-Several files under `api/` and `openapi/*.md` are also read-denied by local settings — expect
+Several files under `api/` and `openapi/references/*.md` are also read-denied by local settings — expect
 this and route around it with `jq`/other tools rather than retrying the same read.
