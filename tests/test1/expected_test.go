@@ -1,4 +1,4 @@
-package tests
+package test1_test
 
 // CustomerDetailCompanyResponseDto represetns 
 // a schema components.schemas.CustomerDetailCompanyResponseDto 
