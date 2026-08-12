@@ -45,6 +45,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/ArraysAndCollections/ArraysAndCollections.json",
 			refFile:   "testdata/ArraysAndCollections/generated.ref.go",
 		},
+		{
+			name:      "CompositionAllOf",
+			inputFile: "testdata/CompositionAllOf/CompositionAllOf.json",
+			refFile:   "testdata/CompositionAllOf/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {

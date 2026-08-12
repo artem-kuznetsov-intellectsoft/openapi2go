@@ -5,6 +5,7 @@ package generator
 import (
 	"fmt"
 	"go/format"
+	"maps"
 	"sort"
 	"strings"
 	"unicode"
@@ -19,9 +20,10 @@ type enumDef struct {
 }
 
 type fieldDef struct {
-	name    string
-	typ     string
-	jsonTag string
+	name     string
+	typ      string
+	jsonTag  string
+	embedded bool
 }
 
 type structDef struct {
@@ -35,8 +37,8 @@ type generator struct {
 	generated map[string]bool
 	enumIndex map[string]*enumDef
 
-	enums   []*enumDef
-	structs []*structDef
+	enums    []*enumDef
+	structs  []*structDef
 	usesTime bool
 }
 
@@ -97,15 +99,49 @@ func (g *generator) resolveNamedType(name string) string {
 	return name
 }
 
-func (g *generator) buildFields(schema *openapi.Schema) []fieldDef {
-	required := toSet(schema.Required)
+// fieldCollector accumulates the pieces buildFields needs while walking a
+// schema's allOf members: embedded structs (from bare $ref members) plus
+// the merged property/required sets contributed by inline members.
+type fieldCollector struct {
+	embedded []fieldDef
+	props    map[string]*openapi.RefOr[*openapi.Schema]
+	required map[string]bool
+}
 
-	fields := make([]fieldDef, 0, len(schema.Properties))
-	for _, propName := range sortedKeys(schema.Properties) {
-		fields = append(fields, g.buildField(propName, schema.Properties[propName], required[propName]))
+// buildFields builds the field list for schema, mapping each allOf member
+// that is a bare $ref to an embedded (anonymous) struct field — the Go
+// idiom for OpenAPI composition — and merging every inline allOf member's
+// properties directly into this struct's own property set.
+func (g *generator) buildFields(schema *openapi.Schema) []fieldDef {
+	c := &fieldCollector{
+		props:    map[string]*openapi.RefOr[*openapi.Schema]{},
+		required: map[string]bool{},
+	}
+	g.collectInlineProperties(schema, c)
+
+	fields := c.embedded
+	for _, propName := range sortedKeys(c.props) {
+		fields = append(fields, g.buildField(propName, c.props[propName], c.required[propName]))
 	}
 
 	return fields
+}
+
+func (g *generator) collectInlineProperties(schema *openapi.Schema, c *fieldCollector) {
+	for _, member := range schema.AllOf {
+		if member.Ref != "" {
+			typeName := g.resolveNamedType(lastPathSegment(member.Ref))
+			c.embedded = append(c.embedded, fieldDef{name: typeName, typ: typeName, embedded: true})
+			continue
+		}
+
+		if member.Value != nil {
+			g.collectInlineProperties(member.Value, c)
+		}
+	}
+
+	maps.Copy(c.props, schema.Properties)
+	maps.Copy(c.required, toSet(schema.Required))
 }
 
 func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Schema], required bool) fieldDef {
@@ -232,6 +268,11 @@ func (g *generator) render(pkgName string) string {
 
 		fmt.Fprintf(&b, "type %s struct {\n", s.name)
 		for _, f := range s.fields {
+			if f.embedded {
+				fmt.Fprintf(&b, "%s\n", f.typ)
+				continue
+			}
+
 			fmt.Fprintf(&b, "%s %s `json:%q`\n", f.name, f.typ, f.jsonTag)
 		}
 		b.WriteString("}\n\n")

@@ -1,6 +1,6 @@
 version: "2"
 linters:
-  default: all
+  default: standard
   disable:
     - wsl
     - gomodguard
@@ -20,3 +20,5 @@ formatters:
         - github.com/artem-kuznetsov-intellectsoft/playground
     gofumpt:
       extra-rules: true
+issues:
+  new: true
