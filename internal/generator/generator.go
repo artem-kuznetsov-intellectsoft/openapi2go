@@ -225,6 +225,10 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 
 		return "int64", nullable
 	case "number":
+		if schema.Format == "float" {
+			return "float32", nullable
+		}
+
 		return "float64", nullable
 	case "boolean":
 		return "bool", nullable
