@@ -168,6 +168,10 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 
 		return "string", nullable
 	case "integer":
+		if schema.Format == "int32" {
+			return "int32", nullable
+		}
+
 		return "int64", nullable
 	case "number":
 		return "float64", nullable

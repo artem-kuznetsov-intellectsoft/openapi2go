@@ -35,6 +35,32 @@ func TestGenerate_CustomerDetailCompanyResponseDto(t *testing.T) {
 	}
 }
 
+func TestGenerate_Car(t *testing.T) {
+	data, err := os.ReadFile("testdata/Car/Car.json")
+	if err != nil {
+		t.Fatalf("reading input fixture: %v", err)
+	}
+
+	var spec openapi.OpenAPI
+	if err := json.Unmarshal(data, &spec); err != nil {
+		t.Fatalf("unmarshaling input fixture: %v", err)
+	}
+
+	got, err := Generate(&spec, "generated")
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	want, err := os.ReadFile("testdata/Car/generated.ref.go")
+	if err != nil {
+		t.Fatalf("reading expected fixture: %v", err)
+	}
+
+	if diff := cmp.Diff(string(want), got); diff != "" {
+		t.Errorf("generated output does not match testdata/Car/generated.ref.go (-want +got):\n%s", diff)
+	}
+}
+
 func TestGenerate_CompanyDetailResponseDto(t *testing.T) {
 	data, err := os.ReadFile("testdata/CompanyDetailResponseDto/components.schemas.CompanyDetailResponseDto.json")
 	if err != nil {
