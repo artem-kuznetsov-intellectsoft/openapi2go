@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	os.Setenv("OPENAPI_FILEPATH", "/Users/artemkuznetsov/Projects/openapi2go/api/openapi.json")
+	os.Setenv("OPENAPI_FILEPATH", "/Users/artemkuznetsov/Projects/openapi2go/tests/test1/components.schemas.CustomerDetailCompanyResponseDto.json")
 }
 
 func main() {
@@ -25,5 +25,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%+v\n", spec)
+	fmt.Printf("%+v\n", string(spec.JSON()))
 }

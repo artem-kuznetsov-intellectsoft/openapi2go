@@ -16,6 +16,11 @@ type OpenAPI struct {
 	ExternalDocs *ExternalDocumentation `json:"externalDocs,omitempty"`
 }
 
+func (schema OpenAPI) JSON() []byte {
+	res, _ := json.MarshalIndent(schema, "", "  ")
+	return res
+}
+
 // Info represents metadata about the API (the Info Object).
 type Info struct {
 	Title          string   `json:"title"`
