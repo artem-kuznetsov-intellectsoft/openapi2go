@@ -2,7 +2,7 @@ version: "2"
 
 linters:
   default: all
-  
+
   disable:
     - depguard
     - exhaustruct
@@ -17,9 +17,9 @@ linters:
     - testpackage
     - varnamelen
     - wrapcheck
-    - wsl            # Deprecated (replaced by wsl_v5)
-    - gomodguard     # Deprecated (replaced by gomodguard_v2)
-    - gomodguard_v2  
+    - wsl # Deprecated (replaced by wsl_v5)
+    - gomodguard # Deprecated (replaced by gomodguard_v2)
+    - gomodguard_v2
 
   exclusions:
     rules:
@@ -34,9 +34,9 @@ linters:
     gosec:
       excludes:
         - G306
-        
+
     revive:
-      enable-default-rules: true  # CRITICAL: Prevents revive from disabling all other default rules
+      enable-default-rules: true # CRITICAL: Prevents revive from disabling all other default rules
       rules:
         - name: package-comments
           disabled: true
