@@ -113,6 +113,11 @@ func TestGenerate(t *testing.T) {
 			inputFile: "testdata/BasePath/BasePath.json",
 			refFile:   "testdata/BasePath/generated.ref.go",
 		},
+		{
+			name:      "PathParameters",
+			inputFile: "testdata/PathParameters/PathParameters.json",
+			refFile:   "testdata/PathParameters/generated.ref.go",
+		},
 	}
 
 	for _, tt := range tests {

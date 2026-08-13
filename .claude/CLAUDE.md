@@ -54,6 +54,9 @@ whenever generating or reviewing generator behavior, not just as background read
     vs. property-merge) from type-mapping.md.
   - `discriminatedAlias` implements the two-member discriminated-`oneOf` → type-alias rule from
     type-mapping.md, short-circuiting normal struct generation for schemas matching that shape.
+  - `registerParamsStruct` implements the operation-`parameters` → `<OperationId>Params` struct
+    rule from type-mapping.md; `resolveParameter` is its `$ref`-against-`components.parameters`
+    counterpart to `resolveNamedType`.
   - `enumIndex` deduplicates enum type/const declarations by the resolved type name (see
     type-mapping.md for how that name is derived) so a repeated enum shape emits once.
   - `usesDateTime`/`usesDate`/`usesOneOf`/`usesDiscriminated` are generator-wide flags — set

@@ -20,6 +20,9 @@ type enumDef struct {
 	values      []string
 }
 
+// goAny is the Go type used for a schema with no more specific mapping.
+const goAny = "any"
+
 type fieldDef struct {
 	name     string
 	typ      string
@@ -37,6 +40,7 @@ type structDef struct {
 
 type generator struct {
 	schemas     map[string]*openapi.Schema
+	parameters  map[string]*openapi.Parameter
 	generated   map[string]bool
 	enumIndex   map[string]*enumDef
 	structIndex map[string]*structDef
@@ -72,6 +76,7 @@ type pendingInlineStruct struct {
 func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string, error) {
 	g := &generator{
 		schemas:     map[string]*openapi.Schema{},
+		parameters:  map[string]*openapi.Parameter{},
 		generated:   map[string]bool{},
 		enumIndex:   map[string]*enumDef{},
 		structIndex: map[string]*structDef{},
@@ -81,6 +86,12 @@ func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string,
 		for name, ref := range spec.Components.Schemas {
 			if ref != nil && ref.Value != nil {
 				g.schemas[name] = ref.Value
+			}
+		}
+
+		for name, ref := range spec.Components.Parameters {
+			if ref != nil && ref.Value != nil {
+				g.parameters[name] = ref.Value
 			}
 		}
 	}
@@ -149,13 +160,15 @@ func (g *generator) walkPaths(paths openapi.Paths) {
 			item.Options, item.Head, item.Patch, item.Trace,
 		} {
 			if op != nil {
-				g.walkOperation(op)
+				g.walkOperation(op, item.Parameters)
 			}
 		}
 	}
 }
 
-func (g *generator) walkOperation(op *openapi.Operation) {
+func (g *generator) walkOperation(op *openapi.Operation, pathParams []*openapi.RefOr[*openapi.Parameter]) {
+	g.registerParamsStruct(op, pathParams)
+
 	if op.RequestBody != nil && op.RequestBody.Value != nil {
 		if schema := firstJSONSchema(op.RequestBody.Value.Content); schema != nil {
 			g.resolveRefOrType("requestBody", schema)
@@ -172,6 +185,83 @@ func (g *generator) walkOperation(op *openapi.Operation) {
 			g.registerErrorResponse(code, resp.Value)
 		}
 	}
+}
+
+// registerParamsStruct generates a "<PascalCase(operationId)>Params" struct
+// for op's path/query/header/cookie parameters, merging pathParams (declared
+// on the enclosing PathItem) with op.Parameters (operation-level parameters
+// override a path-level one of the same name). Skipped when op has no
+// operationId (there would be no name to give the struct) or no parameters
+// at all.
+func (g *generator) registerParamsStruct(op *openapi.Operation, pathParams []*openapi.RefOr[*openapi.Parameter]) {
+	if op.OperationID == "" {
+		return
+	}
+
+	byName := map[string]*openapi.Parameter{}
+	for _, ref := range pathParams {
+		if p := g.resolveParameter(ref); p != nil {
+			byName[p.Name] = p
+		}
+	}
+	for _, ref := range op.Parameters {
+		if p := g.resolveParameter(ref); p != nil {
+			byName[p.Name] = p
+		}
+	}
+
+	if len(byName) == 0 {
+		return
+	}
+
+	name := toPascalCase(op.OperationID) + "Params"
+	if g.generated[name] {
+		return
+	}
+	g.generated[name] = true
+
+	fields := make([]fieldDef, 0, len(byName))
+	for _, paramName := range sortedKeys(byName) {
+		fields = append(fields, g.buildParamField(byName[paramName]))
+	}
+
+	def := &structDef{name: name, fields: fields}
+	g.structs = append(g.structs, def)
+	g.structIndex[name] = def
+}
+
+// resolveParameter dereferences a parameter that may be a direct $ref into
+// components.parameters.
+func (g *generator) resolveParameter(ref *openapi.RefOr[*openapi.Parameter]) *openapi.Parameter {
+	if ref == nil {
+		return nil
+	}
+
+	if ref.Ref != "" {
+		return g.parameters[lastPathSegment(ref.Ref)]
+	}
+
+	return ref.Value
+}
+
+// buildParamField resolves the Go field for a single operation parameter. A
+// path parameter is always treated as required per the OpenAPI spec,
+// regardless of its declared "required" value. Unlike schema fields,
+// parameter fields carry no json tag (they're bound from path/query/header
+// values, not JSON) and optionality is expressed purely with a pointer,
+// since there's no ",omitempty" tag to do that job instead.
+func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
+	typ := goAny
+	if param.Schema != nil {
+		typ, _ = g.resolveRefOrType(param.Name, param.Schema)
+	}
+
+	required := param.Required || param.In == "path"
+	if !required && isPointerable(typ) {
+		typ = "*" + typ
+	}
+
+	return fieldDef{name: toPascalCase(param.Name), typ: typ}
 }
 
 // errorTODOBody is the Error() method body for every 4xx/5xx response type:
@@ -367,7 +457,7 @@ func (g *generator) resolveRefOrType(propName string, ref *openapi.RefOr[*openap
 
 func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (typ string, nullable bool) {
 	if schema == nil {
-		return "any", false
+		return goAny, false
 	}
 
 	nullable = schema.Nullable
@@ -394,7 +484,7 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 
 		return "map[string]any", nullable
 	case "array":
-		itemType := "any"
+		itemType := goAny
 		if schema.Items != nil {
 			itemType = g.resolveArrayItemType(propName, schema.Items)
 		}
@@ -440,7 +530,7 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 	case "boolean":
 		return "bool", nullable
 	default:
-		return "any", nullable
+		return goAny, nullable
 	}
 }
 
@@ -525,12 +615,14 @@ func (g *generator) render(pkgName string) string {
 		default:
 			fmt.Fprintf(&b, "type %s struct {\n", s.name)
 			for _, f := range s.fields {
-				if f.embedded {
+				switch {
+				case f.embedded:
 					fmt.Fprintf(&b, "%s\n", f.typ)
-					continue
+				case f.jsonTag == "":
+					fmt.Fprintf(&b, "%s %s\n", f.name, f.typ)
+				default:
+					fmt.Fprintf(&b, "%s %s `json:%q`\n", f.name, f.typ, f.jsonTag)
 				}
-
-				fmt.Fprintf(&b, "%s %s `json:%q`\n", f.name, f.typ, f.jsonTag)
 			}
 			b.WriteString("}\n\n")
 		}
@@ -572,7 +664,7 @@ func lastPathSegment(ref string) string {
 }
 
 func isPointerable(typ string) bool {
-	return typ != "any" && !strings.HasPrefix(typ, "map[") && !strings.HasPrefix(typ, "[]")
+	return typ != goAny && !strings.HasPrefix(typ, "map[") && !strings.HasPrefix(typ, "[]")
 }
 
 // toPascalCase converts a camelCase, snake_case, or kebab-case JSON property
