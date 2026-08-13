@@ -24,6 +24,6 @@ type Pagination struct {
 
 type Response401 struct{}
 
-func (r Response401) Error() error {
+func (r Response401) Error() string {
 	panic("TODO: define the output")
 }

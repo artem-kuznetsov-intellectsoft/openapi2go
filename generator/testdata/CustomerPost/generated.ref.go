@@ -166,12 +166,12 @@ type GeographicScopeEntry struct {
 
 type Response400 struct{}
 
-func (r Response400) Error() error {
+func (r Response400) Error() string {
 	panic("TODO: define the output")
 }
 
 type Response401 struct{}
 
-func (r Response401) Error() error {
+func (r Response401) Error() string {
 	panic("TODO: define the output")
 }

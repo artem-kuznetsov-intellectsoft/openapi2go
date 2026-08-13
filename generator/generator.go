@@ -35,7 +35,7 @@ type structDef struct {
 	comment   string
 	fields    []fieldDef
 	alias     string // if set, this schema renders as "type name = alias" instead of a struct
-	errorBody string // if set, an `Error() error` method with this body is emitted after the type
+	errorBody string // if set, an `Error() string` method with this body is emitted after the type
 }
 
 type generator struct {
@@ -66,7 +66,7 @@ type pendingInlineStruct struct {
 // components.schemas of spec, plus any enum types referenced by them, as
 // code. It also walks spec.Paths so request bodies and 4xx/5xx responses
 // are generated in operation order (ahead of the alphabetical
-// components.schemas pass) and error responses get an `Error() error`
+// components.schemas pass) and error responses get an `Error() string`
 // method — see registerErrorResponse. It also returns supportFiles: any of
 // openapi.SupportFiles that code depends on (e.g. "date.go", when a
 // date/date-time field was generated), keyed by filename with their package
@@ -303,7 +303,7 @@ func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
 const errorTODOBody = `panic("TODO: define the output")`
 
 // registerErrorResponse generates the type for a 4xx/5xx response and gives
-// it an `Error() error` method: a schema-backed response resolves to its
+// it an `Error() string` method: a schema-backed response resolves to its
 // named struct, while a response with no content synthesizes an empty
 // "Response<code>" struct. Both get the same errorTODOBody.
 func (g *generator) registerErrorResponse(code string, resp *openapi.Response) {
@@ -669,7 +669,7 @@ func (g *generator) render(pkgName string) string {
 		}
 
 		if s.errorBody != "" {
-			fmt.Fprintf(&b, "func (r %s) Error() error {\n%s\n}\n\n", s.name, s.errorBody)
+			fmt.Fprintf(&b, "func (r %s) Error() string {\n%s\n}\n\n", s.name, s.errorBody)
 		}
 	}
 

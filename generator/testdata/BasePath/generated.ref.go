@@ -11,13 +11,13 @@ type ResponseBadRequest struct {
 	Message string `json:"message,omitempty"`
 }
 
-func (r ResponseBadRequest) Error() error {
+func (r ResponseBadRequest) Error() string {
 	panic("TODO: define the output")
 }
 
 type Response404 struct{}
 
-func (r Response404) Error() error {
+func (r Response404) Error() string {
 	panic("TODO: define the output")
 }
 
