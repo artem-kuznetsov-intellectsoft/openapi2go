@@ -1,7 +1,7 @@
 version: "2"
 
 linters:
-  default: all # Valid enum value [4]
+  default: all
   
   disable:
     - depguard
