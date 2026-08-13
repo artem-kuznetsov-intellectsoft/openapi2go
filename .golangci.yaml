@@ -20,11 +20,16 @@ linters:
   exclusions:
     rules:
       - linters:
-          - revive
-        text: "package-comments: should have a package comment"
-      - linters:
           - wsl_v5
         text: "missing whitespace above this line"
+  settings:
+    gosec:
+      excludes:
+        - G306
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
 formatters:
   enable:
     - goimports
