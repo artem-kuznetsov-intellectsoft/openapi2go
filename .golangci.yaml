@@ -16,6 +16,7 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - lll
   exclusions:
     rules:
       - linters:
