@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.4",
   "info": {
-    "title": "OpenAPI Spec Predefined Type-Format Pairs Example",
-    "description": "An OpenAPI 3.0 document showing all official type-format pairs defined in the specification.",
-    "version": "1.0.0"
+    "title": "OpenAPI Spec Extended Type-Format Pairs Example",
+    "description": "An OpenAPI 3.0 document showing all official type-format pairs alongside other commonly supported string validation formats (UUID, Email, URI).",
+    "version": "1.1.0"
   },
   "paths": {
     "/example": {
@@ -38,7 +38,7 @@
     "schemas": {
       "AllSpecFormats": {
         "type": "object",
-        "description": "A schema displaying all official data type format pairs registered in the OpenAPI Specification 3.0.",
+        "description": "A schema displaying all official data type format pairs registered in the OpenAPI Specification 3.0 alongside other widely supported formats.",
         "properties": {
           "integer_int32": {
             "type": "integer",
@@ -93,6 +93,24 @@
             "format": "password",
             "description": "A string value suggesting that UI editors mask the input",
             "example": "secret_password_hint"
+          },
+          "string_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A universally unique identifier as referenced in spec examples",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "string_email": {
+            "type": "string",
+            "format": "email",
+            "description": "An email address conforming to RFC5322",
+            "example": "developer@example.com"
+          },
+          "string_uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "A formatted Uniform Resource Identifier according to RFC3986",
+            "example": "https://spec.openapis.org/oas/v3.0.4.html"
           }
         },
         "required": [
@@ -104,7 +122,10 @@
           "string_binary",
           "string_date",
           "string_date-time",
-          "string_password"
+          "string_password",
+          "string_uuid",
+          "string_email",
+          "string_uri"
         ]
       }
     }

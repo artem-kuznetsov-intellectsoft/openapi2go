@@ -12,5 +12,8 @@ type AllSpecFormats struct {
 	StringByte     []byte           `json:"string_byte"`
 	StringDate     openapi.Date     `json:"string_date"`
 	StringDateTime openapi.DateTime `json:"string_date-time"`
+	StringEmail    string           `json:"string_email"`
 	StringPassword string           `json:"string_password"`
+	StringUri      string           `json:"string_uri"`
+	StringUuid     string           `json:"string_uuid"`
 }
