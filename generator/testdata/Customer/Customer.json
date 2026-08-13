@@ -1,0 +1,92 @@
+{
+    "paths": {
+        "/customer": {
+            "get": {
+                "description": "Retrieves a paginated list of Customers created by Superclient.",
+                "operationId": "CustomerController_getAllCustomers",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "Page number (starting from 1)",
+                        "schema": {
+                            "example": 1,
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "required": true,
+                        "in": "query",
+                        "description": "Number of Customers per page (max 100)",
+                        "schema": {
+                            "example": 50,
+                            "type": "number"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customers retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "customers": {
+                                            "type": "array",
+                                            "items": {
+                                                "oneOf": [
+                                                    {
+                                                        "$ref": "#/components/schemas/CustomerListCompanyResponseDto"
+                                                    },
+                                                    {
+                                                        "$ref": "#/components/schemas/CustomerListIndividualResponseDto"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "pagination": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "number",
+                                                    "description": "Current page number"
+                                                },
+                                                "limit": {
+                                                    "type": "number",
+                                                    "description": "Number of items per page"
+                                                },
+                                                "total": {
+                                                    "type": "number",
+                                                    "description": "Total number of customers"
+                                                },
+                                                "totalPages": {
+                                                    "type": "number",
+                                                    "description": "Total number of pages"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing API key"
+                    }
+                },
+                "security": [
+                    {
+                        "api-key-config": []
+                    }
+                ],
+                "summary": "List of Customers created by Superclient",
+                "tags": [
+                    "Customer"
+                ]
+            }
+        }
+    }
+}

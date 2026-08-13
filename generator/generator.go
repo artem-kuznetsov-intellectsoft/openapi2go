@@ -172,19 +172,46 @@ func (g *generator) walkOperation(op *openapi.Operation, pathParams []*openapi.R
 	if op.RequestBody != nil && op.RequestBody.Value != nil {
 		if schema := firstJSONSchema(op.RequestBody.Value.Content); schema != nil {
 			g.resolveRefOrType("requestBody", schema)
+			g.flushPendingInline()
 		}
 	}
 
 	for _, code := range sortedKeys(op.Responses) {
-		status, err := strconv.Atoi(code)
-		if err != nil || status < 400 || status > 599 {
+		resp := op.Responses[code]
+		if resp == nil || resp.Value == nil {
 			continue
 		}
 
-		if resp := op.Responses[code]; resp != nil && resp.Value != nil {
+		status, err := strconv.Atoi(code)
+		if err == nil && status >= 400 && status <= 599 {
 			g.registerErrorResponse(code, resp.Value)
+			g.flushPendingInline()
+			continue
 		}
+
+		g.registerInlineResponse(code, resp.Value)
+		g.flushPendingInline()
 	}
+}
+
+// registerInlineResponse generates a type for a non-error (1xx/2xx/3xx, or
+// "default") response's schema when it's inline, mirroring requestBody
+// handling — see type-mapping.md §4. A schema that's a $ref (or
+// allOf-wrapped nullable $ref) into components.schemas is left untouched
+// here: it has no inline content of its own to generate, so it's picked up
+// by the later alphabetical components.schemas pass instead, preserving the
+// existing declaration order for named 2xx/3xx/default schemas.
+func (g *generator) registerInlineResponse(code string, resp *openapi.Response) {
+	schema := firstJSONSchema(resp.Content)
+	if schema == nil {
+		return
+	}
+
+	if _, _, ok := unwrapRef(schema); ok {
+		return
+	}
+
+	g.resolveRefOrType("Response"+toPascalCase(code), schema)
 }
 
 // registerParamsStruct generates a "<PascalCase(operationId)>Params" struct
