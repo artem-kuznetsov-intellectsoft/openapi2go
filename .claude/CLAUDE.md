@@ -26,6 +26,13 @@ Run the generator CLI directly:
 go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 ```
 
+## Type-mapping rules
+
+@rules/type-mapping.md
+
+The above is the authoritative rule set for OpenAPI→Go type mapping. Treat it as binding
+whenever generating or reviewing generator behavior, not just as background reading.
+
 ## Architecture
 
 - **`openapi/schema.go`** — the OpenAPI Object model. Anything that can be either an inline
@@ -34,7 +41,7 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 - **`generator/generator.go`** — the actual OpenAPI→Go translation. A single
   unexported `generator` struct accumulates `structDef`/`enumDef` entries while walking schemas,
   then `render` emits source text that is passed through `go/format.Source` before being
-  returned. Key behaviors baked into this code (see also the type-mapping rules in `README.md`):
+  returned. Key behaviors baked into this code (see also the "Type-mapping rules" section above):
   - Struct fields are emitted in **alphabetical order of the JSON property name**, not spec
     declaration order (`sortedKeys`).
   - `$ref` resolution is recursive and memoized via `generator.generated`/`resolveNamedType` —
