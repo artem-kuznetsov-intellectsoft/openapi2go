@@ -257,7 +257,7 @@ func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
 		return ""
 	}
 
-	requestType, _ := g.resolveRefOrType("requestBody", schema)
+	requestType, _, _ := g.resolveRefOrType("requestBody", schema)
 	g.flushPendingInline()
 
 	return requestType
@@ -346,7 +346,7 @@ func (g *generator) registerInlineResponse(code string, resp *openapi.Response) 
 		return name
 	}
 
-	typeName, _ := g.resolveRefOrType("Response"+toPascalCase(code), schema)
+	typeName, _, _ := g.resolveRefOrType("Response"+toPascalCase(code), schema)
 
 	return typeName
 }
@@ -426,7 +426,7 @@ func (g *generator) resolveParameter(ref *openapi.RefOr[*openapi.Parameter]) *op
 func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
 	typ := goAny
 	if param.Schema != nil {
-		typ, _ = g.resolveRefOrType(param.Name, param.Schema)
+		typ, _, _ = g.resolveRefOrType(param.Name, param.Schema)
 	}
 
 	required := param.Required || param.In == "path"
@@ -455,7 +455,7 @@ func (g *generator) registerErrorResponse(code string, resp *openapi.Response) s
 		return g.registerNoContentErrorResponse(code)
 	}
 
-	typeName, _ := g.resolveRefOrType("Response"+code, schema)
+	typeName, _, _ := g.resolveRefOrType("Response"+code, schema)
 	if def, ok := g.structIndex[typeName]; ok && def.errorBody == "" {
 		def.errorBody = errorTODOBody
 	}
@@ -553,8 +553,8 @@ func (g *generator) discriminatedAlias(name string, schema *openapi.Schema) (str
 		return "", false
 	}
 
-	typA, _ := g.resolveRefOrType(name, schema.OneOf[0])
-	typB, _ := g.resolveRefOrType(name, schema.OneOf[1])
+	typA, _, _ := g.resolveRefOrType(name, schema.OneOf[0])
+	typB, _, _ := g.resolveRefOrType(name, schema.OneOf[1])
 	g.usesDiscriminated = true
 
 	return fmt.Sprintf("Discriminated[%s, %s]", typA, typB), true
@@ -608,13 +608,22 @@ func (g *generator) collectInlineProperties(schema *openapi.Schema, c *fieldColl
 func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Schema], required bool) fieldDef {
 	goName := toPascalCase(propName)
 
-	typ, nullable := g.resolveRefOrType(propName, ref)
+	typ, nullable, isStruct := g.resolveRefOrType(propName, ref)
 	if nullable && isPointerable(typ) {
 		typ = "*" + typ
 	}
 
 	tag := propName
-	if !required {
+	switch {
+	case required:
+		// present tag with no suffix
+	case !nullable && isStruct:
+		// encoding/json's omitempty never considers a struct value empty, so a
+		// non-pointer struct field (DateTime, Date, OneOf, a $ref/generated
+		// struct) needs omitzero's zero-value check instead — see
+		// omitzero-mapping.md.
+		tag += ",omitzero"
+	default:
 		tag += ",omitempty"
 	}
 
@@ -623,28 +632,30 @@ func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Sche
 
 // resolveRefOrType resolves the Go type for a property or array-item value
 // that may be a direct $ref, an allOf-wrapped nullable $ref, or an inline
-// schema.
-func (g *generator) resolveRefOrType(propName string, ref *openapi.RefOr[*openapi.Schema]) (typ string, nullable bool) {
+// schema. isStruct reports whether typ is a struct Kind value (as opposed to
+// a scalar, enum, map, slice, or any) — see omitzero-mapping.md for why
+// buildField needs this to pick the right JSON tag suffix.
+func (g *generator) resolveRefOrType(propName string, ref *openapi.RefOr[*openapi.Schema]) (string, bool, bool) {
 	if refName, refNullable, ok := unwrapRef(ref); ok {
-		return g.resolveNamedType(refName), refNullable
+		return g.resolveNamedType(refName), refNullable, true
 	}
 
 	return g.resolveSchemaType(propName, ref.Value)
 }
 
-func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (typ string, nullable bool) {
+func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (string, bool, bool) {
 	if schema == nil {
-		return goAny, false
+		return goAny, false, false
 	}
 
-	nullable = schema.Nullable
+	nullable := schema.Nullable
 
 	if len(schema.OneOf) == 2 {
-		typA, _ := g.resolveRefOrType(propName, schema.OneOf[0])
-		typB, _ := g.resolveRefOrType(propName, schema.OneOf[1])
+		typA, _, _ := g.resolveRefOrType(propName, schema.OneOf[0])
+		typB, _, _ := g.resolveRefOrType(propName, schema.OneOf[1])
 		g.usesOneOf = true
 
-		return fmt.Sprintf("OneOf[%s, %s]", typA, typB), nullable
+		return fmt.Sprintf("OneOf[%s, %s]", typA, typB), nullable, true
 	}
 
 	// A schema whose only shape comes from a multi-member allOf (composition,
@@ -654,70 +665,94 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 	// covers an inline object appearing this way as a property value, an
 	// array item, or an operation's requestBody/response schema.
 	if len(schema.AllOf) > 0 {
-		return g.resolveInlineObjectType(toPascalCase(propName), schema), nullable
+		return g.resolveInlineObjectType(toPascalCase(propName), schema), nullable, true
 	}
 
+	typ, isStruct := g.resolveScalarSchemaType(propName, schema)
+
+	return typ, nullable, isStruct
+}
+
+// resolveScalarSchemaType resolves every schema.Type case that isn't oneOf
+// or a multi-member allOf (already handled by resolveSchemaType above).
+func (g *generator) resolveScalarSchemaType(propName string, schema *openapi.Schema) (string, bool) {
 	switch schema.Type {
 	case "object":
-		if ref, ok := schema.AdditionalProperties.(*openapi.RefOr[*openapi.Schema]); ok && ref != nil {
-			valType, _ := g.resolveRefOrType(propName, ref)
-
-			return "map[string]" + valType, nullable
-		}
-
-		if len(schema.Properties) > 0 {
-			return g.resolveInlineObjectType(toPascalCase(propName), schema), nullable
-		}
-
-		return "map[string]any", nullable
+		return g.resolveObjectSchemaType(propName, schema)
 	case "array":
 		itemType := goAny
 		if schema.Items != nil {
 			itemType = g.resolveArrayItemType(propName, schema.Items)
 		}
 
-		return "[]" + itemType, nullable
+		return "[]" + itemType, false
 	case "string":
-		if len(schema.Enum) > 0 {
-			enumName := toPascalCase(propName)
-			g.registerEnum(enumName, schema)
-
-			return enumName, nullable
-		}
-
-		if schema.Format == "date-time" {
-			g.usesDateTime = true
-
-			return "DateTime", nullable
-		}
-
-		if schema.Format == "date" {
-			g.usesDate = true
-
-			return "Date", nullable
-		}
-
-		if schema.Format == "byte" {
-			return "[]byte", nullable
-		}
-
-		return "string", nullable
-	case "integer":
-		if schema.Format == "int32" {
-			return "int32", nullable
-		}
-
-		return "int64", nullable
-	case "number":
-		if schema.Format == "float" {
-			return "float32", nullable
-		}
-
-		return "float64", nullable
+		return g.resolveStringSchemaType(propName, schema)
+	case schemaTypeInteger, "number":
+		return resolveNumericSchemaType(schema), false
 	case "boolean":
-		return "bool", nullable
+		return "bool", false
 	default:
-		return goAny, nullable
+		return goAny, false
+	}
+}
+
+// schemaTypeInteger is the OpenAPI schema.Type value for an integer, used by
+// both resolveScalarSchemaType's switch and resolveNumericSchemaType's.
+const schemaTypeInteger = "integer"
+
+// resolveNumericSchemaType resolves the "integer"/"number" case of
+// resolveScalarSchemaType by its declared format.
+func resolveNumericSchemaType(schema *openapi.Schema) string {
+	switch {
+	case schema.Type == schemaTypeInteger && schema.Format == "int32":
+		return "int32"
+	case schema.Type == schemaTypeInteger:
+		return "int64"
+	case schema.Format == "float":
+		return "float32"
+	default:
+		return "float64"
+	}
+}
+
+// resolveObjectSchemaType resolves the "object" case of resolveSchemaType: a
+// free-form map, a map with a typed value schema, or an inline named struct.
+func (g *generator) resolveObjectSchemaType(propName string, schema *openapi.Schema) (string, bool) {
+	if ref, ok := schema.AdditionalProperties.(*openapi.RefOr[*openapi.Schema]); ok && ref != nil {
+		valType, _, _ := g.resolveRefOrType(propName, ref)
+
+		return "map[string]" + valType, false
+	}
+
+	if len(schema.Properties) > 0 {
+		return g.resolveInlineObjectType(toPascalCase(propName), schema), true
+	}
+
+	return "map[string]any", false
+}
+
+// resolveStringSchemaType resolves the "string" case of resolveSchemaType:
+// an enum, a date/date-time struct, a byte slice, or a plain string.
+func (g *generator) resolveStringSchemaType(propName string, schema *openapi.Schema) (string, bool) {
+	if len(schema.Enum) > 0 {
+		enumName := toPascalCase(propName)
+		g.registerEnum(enumName, schema)
+
+		return enumName, false
+	}
+
+	switch schema.Format {
+	case "date-time":
+		g.usesDateTime = true
+		return "DateTime", true
+	case "date":
+		g.usesDate = true
+		return "Date", true
+	case "byte":
+		return "[]byte", false
+	default:
+		return "string", false
 	}
 }
 
@@ -735,7 +770,7 @@ func (g *generator) resolveArrayItemType(propName string, items *openapi.RefOr[*
 		return g.resolveInlineObjectType(toPascalCase(propName)+"Entry", items.Value)
 	}
 
-	typ, _ := g.resolveSchemaType(propName, items.Value)
+	typ, _, _ := g.resolveSchemaType(propName, items.Value)
 
 	return typ
 }

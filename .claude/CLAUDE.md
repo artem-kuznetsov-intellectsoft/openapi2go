@@ -42,6 +42,17 @@ separate concern from type-mapping.md (operation → Client method, not schema �
 depends on it: every type name client.go references is reused verbatim from what
 type-mapping.md's rules already produced for the main generated file.
 
+## `omitzero` vs. `omitempty` rules
+
+@rules/omitzero-mapping.md
+
+The above refines one specific tag decision from type-mapping.md §2 (the required:false +
+nullable:false row): struct-typed fields must use `,omitzero` instead of `,omitempty`, since
+`encoding/json`'s `omitempty` never omits a struct Kind value. Implemented in
+`generator.buildField` via a third `isStruct` return value threaded through
+`resolveRefOrType`/`resolveSchemaType` and its per-schema-type helpers (see that file's
+"Implementation" section) and covered by the `fixtures/OmitZero/` golden-file case.
+
 ## Architecture
 
 - **`openapi/schema.go`** — the OpenAPI Object model. Anything that can be either an inline
@@ -68,6 +79,11 @@ type-mapping.md's rules already produced for the main generated file.
     counterpart to `resolveNamedType`.
   - `enumIndex` deduplicates enum type/const declarations by the resolved type name (see
     type-mapping.md for how that name is derived) so a repeated enum shape emits once.
+  - `resolveRefOrType`/`resolveSchemaType` thread a third `isStruct` return value (via
+    `resolveScalarSchemaType` and its per-type helpers `resolveObjectSchemaType`/
+    `resolveStringSchemaType`/`resolveNumericSchemaType`) alongside the resolved Go type name and
+    its `nullable` bit; `buildField` uses `isStruct` to pick `,omitzero` over `,omitempty` — see
+    omitzero-mapping.md.
   - `usesDateTime`/`usesDate`/`usesOneOf`/`usesDiscriminated` are generator-wide flags — set
     whenever a field mapping requires it — that `Generate` uses to pick which of
     `openapi.SupportFiles()` (`date.go`, `oneof.go`, `discriminated.go`, embedded verbatim from

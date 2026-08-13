@@ -2,7 +2,7 @@ package generated
 
 // BaseModel is generated from components.schemas.BaseModel.
 type BaseModel struct {
-	CreatedAt DateTime `json:"created_at,omitempty"`
+	CreatedAt DateTime `json:"created_at,omitzero"`
 	Id        string   `json:"id"`
 }
 

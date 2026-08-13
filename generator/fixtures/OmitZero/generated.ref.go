@@ -1,0 +1,30 @@
+package generated
+
+type CustomerType string
+
+const (
+	CustomerTypeINDIVIDUAL CustomerType = "INDIVIDUAL"
+	CustomerTypeCOMPANY    CustomerType = "COMPANY"
+)
+
+// Address is generated from components.schemas.Address.
+type Address struct {
+	City string `json:"city,omitempty"`
+}
+
+// OmitZero is generated from components.schemas.OmitZero.
+type OmitZero struct {
+	BillingAddress  Address              `json:"billingAddress,omitzero"`
+	CreatedAt       DateTime             `json:"createdAt,omitzero"`
+	CustomerType    CustomerType         `json:"customerType,omitempty"`
+	Id              string               `json:"id"`
+	IdOrCode        OneOf[string, int64] `json:"idOrCode,omitzero"`
+	Metadata        map[string]any       `json:"metadata,omitempty"`
+	Profile         Profile              `json:"profile,omitzero"`
+	ShippingAddress *Address             `json:"shippingAddress,omitempty"`
+	Tags            []string             `json:"tags,omitempty"`
+}
+
+type Profile struct {
+	Bio string `json:"bio,omitempty"`
+}

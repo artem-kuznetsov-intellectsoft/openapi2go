@@ -118,7 +118,7 @@ type CustomerDetailCompanyResponseDto struct{}
 
 type Response201 struct {
 	CustomerDetailCompanyResponseDto
-	Company Company       `json:"company,omitempty"`
+	Company Company       `json:"company,omitzero"`
 	Vibans  []VibansEntry `json:"vibans,omitempty"`
 }
 

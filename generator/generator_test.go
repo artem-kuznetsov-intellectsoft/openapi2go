@@ -110,6 +110,11 @@ func TestGenerate(t *testing.T) {
 			refFile:   "fixtures/IndividualResponseDto/generated.ref.go",
 		},
 		{
+			name:      "OmitZero",
+			inputFile: "fixtures/OmitZero/OmitZero.json",
+			refFile:   "fixtures/OmitZero/generated.ref.go",
+		},
+		{
 			name:          "BasePath",
 			inputFile:     "fixtures/BasePath/BasePath.json",
 			refFile:       "fixtures/BasePath/generated.ref.go",

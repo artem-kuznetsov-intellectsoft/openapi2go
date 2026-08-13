@@ -5,8 +5,8 @@ type PrimitivesAndFormats struct {
 	BinaryField   string   `json:"binary_field,omitempty"`
 	BooleanField  bool     `json:"boolean_field,omitempty"`
 	ByteField     []byte   `json:"byte_field,omitempty"`
-	DateField     Date     `json:"date_field,omitempty"`
-	DateTimeField DateTime `json:"date_time_field,omitempty"`
+	DateField     Date     `json:"date_field,omitzero"`
+	DateTimeField DateTime `json:"date_time_field,omitzero"`
 	DoubleField   float64  `json:"double_field,omitempty"`
 	FloatField    float32  `json:"float_field,omitempty"`
 	Int32Field    int32    `json:"int32_field,omitempty"`
