@@ -6,52 +6,211 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Company unique identifier."
           },
           "name": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "description": "Registered corporate name."
           },
           "jurisdictionCountryCode": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "Country of incorporation (ISO 3166-1 alpha-2)."
           },
           "registrationNumber": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "description": "Official company registration number."
           },
           "taxId": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "description": "VAT, LEI, or national tax identifier."
           },
           "email": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "format": "email",
+            "description": "Company contact email."
           },
           "phone": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "description": "Company contact phone number."
           },
           "website": {
-            "type": "object",
-            "nullable": true
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "description": "Public company website."
           },
           "kybVerificationLink": {
             "type": "string",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "format": "uri",
+            "description": "External KYB verification link."
           },
           "compliance": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CompanyComplianceResponseDto"
-              }
-            ]
-          },
-          "brandName": {
             "type": "object",
             "nullable": true,
-            "description": "Commercial / brand name (if distinct from legal name)"
+            "description": "Canonical structured compliance values stored for the company.",
+            "properties": {
+              "sourceOfFunds": {
+                "type": "string",
+                "enum": [
+                  "BUSINESS_TRADING_REVENUE",
+                  "SHAREHOLDER_CAPITAL_EQUITY_CONTRIBUTION",
+                  "INTRA_GROUP_FINANCING_PARENT_FUNDING",
+                  "BANK_LOAN_CREDIT_FACILITY",
+                  "INVESTOR_FUNDRAISING_PROCEEDS",
+                  "SALE_OF_ASSETS_BUSINESS",
+                  "CRYPTO_ASSET_ACTIVITY_PROCEEDS",
+                  "THIRD_PARTY_CLIENT_FUNDS",
+                  "OTHER"
+                ],
+                "description": "Source of funds. Allowed values: BUSINESS_TRADING_REVENUE = Business / trading revenue; SHAREHOLDER_CAPITAL_EQUITY_CONTRIBUTION = Shareholder capital / equity contribution; INTRA_GROUP_FINANCING_PARENT_FUNDING = Intra-group financing / parent funding; BANK_LOAN_CREDIT_FACILITY = Bank loan / credit facility; INVESTOR_FUNDRAISING_PROCEEDS = Investor / fundraising proceeds (VC, PE); SALE_OF_ASSETS_BUSINESS = Sale of assets / business; CRYPTO_ASSET_ACTIVITY_PROCEEDS = Proceeds from crypto-asset activity; THIRD_PARTY_CLIENT_FUNDS = Third-party / client funds (not own funds); OTHER = Other (not listed)."
+              },
+              "sourceOfFundsDetails": {
+                "type": "string",
+                "description": "Original narrative when sourceOfFunds is OTHER.",
+                "maxLength": 1024
+              },
+              "purpose": {
+                "type": "string",
+                "enum": [
+                  "OPERATIONAL_ACCOUNT",
+                  "SALARY",
+                  "INVESTMENT",
+                  "TREASURY_MANAGEMENT",
+                  "ON_OFF_RAMP",
+                  "INTERNATIONAL_PAYMENTS",
+                  "OTHER"
+                ],
+                "description": "Purpose of the relationship. Allowed values: OPERATIONAL_ACCOUNT = Operational account; SALARY = Salary; INVESTMENT = Investment; TREASURY_MANAGEMENT = Treasury management; ON_OFF_RAMP = On/Off-ramp (fiat <-> crypto); INTERNATIONAL_PAYMENTS = International payments / remittance; OTHER = Other (not listed - please specify)."
+              },
+              "purposeDetails": {
+                "type": "string",
+                "description": "Original narrative when purpose is OTHER.",
+                "maxLength": 1024
+              },
+              "expectedYearlyTxCount": {
+                "type": "string",
+                "enum": [
+                  "LT_50",
+                  "B_50_500",
+                  "B_500_5000",
+                  "B_5000_50000",
+                  "GT_50000"
+                ],
+                "description": "Expected yearly transaction count. Allowed values: LT_50 = < 50 transactions / year; B_50_500 = 50 - 500 transactions / year; B_500_5000 = 500 - 5,000 transactions / year; B_5000_50000 = 5,000 - 50,000 transactions / year; GT_50000 = > 50,000 transactions / year.",
+                "example": "B_50_500"
+              },
+              "geographicScope": {
+                "type": "array",
+                "description": "Countries accounting for more than 20% of expected flows and their direction.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "countryCode",
+                    "direction"
+                  ],
+                  "properties": {
+                    "countryCode": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 2,
+                      "example": "FR"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "SEND",
+                        "RECEIVE",
+                        "BOTH"
+                      ],
+                      "description": "SEND = outbound; RECEIVE = inbound; BOTH = inbound and outbound.",
+                      "example": "BOTH"
+                    }
+                  }
+                }
+              },
+              "productsSubscribed": {
+                "type": "array",
+                "description": "Products selected by the customer.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "DIRECT_MINT_BURN",
+                    "EUR_ACCOUNT",
+                    "FX_SWAP"
+                  ]
+                },
+                "example": [
+                  "EUR_ACCOUNT"
+                ]
+              },
+              "financialAssets": {
+                "type": "string",
+                "enum": [
+                  "LT_100K",
+                  "B_100K_1M",
+                  "B_1M_10M",
+                  "B_10M_100M",
+                  "GT_100M",
+                  "OTHER"
+                ],
+                "description": "Total financial assets. Allowed values: LT_100K = < €100,000; B_100K_1M = €100,000 - €1,000,000; B_1M_10M = €1,000,000 - €10,000,000; B_10M_100M = €10,000,000 - €100,000,000; GT_100M = > €100,000,000; OTHER = Other."
+              },
+              "financialAssetsOther": {
+                "type": "string",
+                "description": "Original narrative when financialAssets is OTHER.",
+                "maxLength": 255
+              },
+              "turnoverBracket": {
+                "type": "string",
+                "enum": [
+                  "LT_100K",
+                  "B_100K_1M",
+                  "B_1M_10M",
+                  "B_10M_50M",
+                  "B_50M_250M",
+                  "GT_250M",
+                  "OTHER"
+                ],
+                "description": "Annual turnover. Allowed values: LT_100K = < €100,000; B_100K_1M = €100,000 - €1,000,000; B_1M_10M = €1,000,000 - €10,000,000; B_10M_50M = €10,000,000 - €50,000,000; B_50M_250M = €50,000,000 - €250,000,000; GT_250M = > €250,000,000; OTHER = Other."
+              },
+              "turnoverBracketOther": {
+                "type": "string",
+                "description": "Original narrative when turnoverBracket is OTHER.",
+                "maxLength": 255
+              },
+              "expectedYearlyVolume": {
+                "type": "string",
+                "enum": [
+                  "LT_100K",
+                  "B_100K_1M",
+                  "B_1M_10M",
+                  "B_10M_50M",
+                  "B_50M_250M",
+                  "GT_250M"
+                ],
+                "description": "Expected yearly transaction volume. Allowed values: LT_100K = < €100,000; B_100K_1M = €100,000 - €1,000,000; B_1M_10M = €1,000,000 - €10,000,000; B_10M_50M = €10,000,000 - €50,000,000; B_50M_250M = €50,000,000 - €250,000,000; GT_250M = > €250,000,000."
+              },
+              "website": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://dupont-fils.fr"
+              }
+            }
+          },
+          "brandName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Commercial or trading name."
           },
           "legalForm": {
             "type": "string",
@@ -74,18 +233,18 @@
               "OTHER",
               "SOLE_PROPRIETORSHIP"
             ],
-            "description": "Legal form code; OTHER falls back to `legalFormOther`"
+            "description": "Legal form; OTHER uses legalFormOther."
           },
           "legalFormOther": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "Free-text legal form when `legalForm = OTHER`"
+            "description": "Free-text legal form when legalForm is OTHER."
           },
           "registrationDate": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "format": "date",
-            "description": "Date the legal entity was registered"
+            "description": "Date the legal entity was registered."
           },
           "sector": {
             "type": "string",
@@ -118,17 +277,18 @@
               "PERSONAL_HOUSEHOLD_SERVICES",
               "OTHER"
             ],
-            "description": "NACE level-1 sector; OTHER falls back to `sectorOther`"
+            "description": "Business sector; OTHER uses sectorOther."
           },
           "sectorOther": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "Free-text sector when `sector = OTHER`"
+            "description": "Free-text business sector when sector is OTHER."
           },
           "activityDescription": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "Free-narrative business activity description"
+            "description": "Description of the company business activity.",
+            "maxLength": 1024
           },
           "crsClassification": {
             "type": "string",
@@ -138,22 +298,24 @@
               "PASSIVE_NFE",
               "FINANCIAL_INSTITUTION"
             ],
-            "description": "CRS classification (ACTIVE_NFE / PASSIVE_NFE / FINANCIAL_INSTITUTION)"
+            "description": "Common Reporting Standard classification."
           },
           "taxResidenceCountryCode": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "ISO 3166-1 alpha-2 country code of tax residence"
+            "description": "Tax-residence country (ISO 3166-1 alpha-2).",
+            "minLength": 2,
+            "maxLength": 2
           },
           "tin": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "TIN. Required when `taxResidenceCountryCode != FR`."
+            "description": "Tax identification number."
           },
           "preferredBankAccount": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "Preferred bank account for incoming settlements"
+            "description": "Preferred bank account for incoming settlements."
           },
           "preferredWalletChain": {
             "type": "string",
@@ -167,12 +329,12 @@
               "SOLANA",
               "P_LAYER"
             ],
-            "description": "Preferred wallet chain for incoming settlements"
+            "description": "Preferred wallet network for incoming settlements."
           },
           "preferredWalletAddress": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
-            "description": "Preferred wallet address for incoming settlements"
+            "description": "Preferred wallet address on preferredWalletChain."
           },
           "capacity": {
             "type": "string",
@@ -180,23 +342,58 @@
             "enum": [
               "OWN_ACCOUNT",
               "THIRD_PARTY_FUNDS"
-            ]
+            ],
+            "description": "Whether the company acts for its own account or with third-party funds."
           },
           "physicalAddress": {
+            "type": "object",
             "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PhysicalAddressResponseDto"
+            "required": [
+              "addressLine1",
+              "city",
+              "zipCode",
+              "countryCode"
+            ],
+            "properties": {
+              "addressLine1": {
+                "type": "string",
+                "description": "Street address line 1",
+                "example": "12 Rue de Rivoli"
+              },
+              "addressLine2": {
+                "type": "string",
+                "description": "Street address line 2",
+                "example": "Bâtiment B"
+              },
+              "city": {
+                "type": "string",
+                "description": "City",
+                "example": "Paris"
+              },
+              "zipCode": {
+                "type": "string",
+                "description": "Postal/ZIP code",
+                "example": "75001"
+              },
+              "countryCode": {
+                "type": "string",
+                "description": "ISO 3166-1 alpha-2 country code",
+                "example": "FR",
+                "minLength": 2,
+                "maxLength": 2
               }
-            ]
+            },
+            "description": "Structured registered physical address."
           },
           "createdAt": {
+            "type": "string",
             "format": "date-time",
-            "type": "string"
+            "description": "Company creation timestamp."
           },
           "updatedAt": {
+            "type": "string",
             "format": "date-time",
-            "type": "string"
+            "description": "Company update timestamp."
           },
           "legalRepresentatives": {
             "type": "array",
@@ -248,7 +445,6 @@
           "preferredWalletChain",
           "preferredWalletAddress",
           "capacity",
-          "physicalAddress",
           "createdAt",
           "updatedAt",
           "legalRepresentatives",
