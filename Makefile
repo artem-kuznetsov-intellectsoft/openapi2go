@@ -14,3 +14,6 @@ lint:
 
 lint-all:
 	golangci-lint run -c .golangci.all.yaml ./...
+
+fmt-all:
+	golangci-lint fmt -c .golangci.all.yaml ./...
