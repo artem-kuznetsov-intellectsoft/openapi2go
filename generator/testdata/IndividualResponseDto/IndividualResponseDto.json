@@ -13,95 +13,133 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Individual unique identifier."
           },
           "firstName": {
             "type": "string",
             "nullable": true,
-            "example": "Jean"
+            "example": "Jean",
+            "description": "Legal first name."
           },
           "middleName": {
             "type": "string",
             "nullable": true,
-            "example": "Marie"
+            "example": "Marie",
+            "description": "Legal middle name, when applicable."
           },
           "lastName": {
             "type": "string",
             "nullable": true,
-            "example": "Dupont"
+            "example": "Dupont",
+            "description": "Legal last name."
           },
           "dateOfBirth": {
             "type": "string",
             "nullable": true,
             "format": "date",
-            "example": "1990-01-15"
+            "example": "1990-01-15",
+            "description": "Date of birth."
           },
           "placeOfBirthCity": {
             "type": "string",
             "nullable": true,
-            "example": "Paris"
+            "example": "Paris",
+            "description": "City of birth."
           },
           "placeOfBirthCountryCode": {
             "type": "string",
             "nullable": true,
-            "example": "FR"
+            "example": "FR",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "Country of birth (ISO 3166-1 alpha-2)."
           },
           "nationalities": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
             "example": [
               "FR",
               "IT"
-            ]
+            ],
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "description": "Nationality country codes (ISO 3166-1 alpha-2); the first is primary."
           },
           "residenceCountryCode": {
             "type": "string",
             "nullable": true,
-            "example": "FR"
+            "example": "FR",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "Country of residence (ISO 3166-1 alpha-2)."
           },
           "email": {
             "type": "string",
             "nullable": true,
-            "example": "jean.dupont@dupont-fils.fr"
+            "example": "jean.dupont@dupont-fils.fr",
+            "format": "email",
+            "description": "Contact email."
           },
           "phone": {
             "type": "string",
             "nullable": true,
-            "example": "+33612345678"
+            "example": "+33612345678",
+            "description": "Contact phone number."
           },
           "documentType": {
             "type": "string",
             "nullable": true,
-            "example": "PASSPORT"
+            "example": "PASSPORT",
+            "enum": [
+              "ID",
+              "PASSPORT",
+              "RESIDENCY_PERMIT",
+              "NOT_PROVIDED"
+            ],
+            "description": "Identity document type. NOT_PROVIDED is a legacy response value and cannot be submitted for new records."
           },
           "documentNumber": {
             "type": "string",
             "nullable": true,
-            "example": "FR12AB34567"
+            "example": "FR12AB34567",
+            "description": "Identity document number."
           },
           "documentCountryCode": {
             "type": "string",
             "nullable": true,
-            "example": "FR"
+            "example": "FR",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "Identity document issuing country (ISO 3166-1 alpha-2)."
           },
           "documentExpiry": {
             "type": "string",
             "nullable": true,
             "format": "date",
-            "example": "2030-12-31"
+            "example": "2030-12-31",
+            "description": "Identity document expiry date."
           },
           "taxResidences": {
             "type": "array",
             "items": {
               "type": "object",
+              "required": [
+                "countryCode",
+                "tin"
+              ],
               "properties": {
                 "countryCode": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2,
+                  "description": "Tax-residence country (ISO 3166-1 alpha-2)."
                 },
                 "tin": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Tax identification number in that country."
                 }
               }
             },
@@ -110,46 +148,349 @@
                 "countryCode": "FR",
                 "tin": "FR1234567890"
               }
-            ]
+            ],
+            "description": "Tax residences and their tax identification numbers."
           },
           "isSoleTrader": {
             "type": "boolean",
             "nullable": false,
-            "example": false
+            "example": false,
+            "description": "Whether the individual acts as a sole trader."
           },
           "kycVerificationLink": {
             "type": "string",
             "nullable": false,
-            "maxLength": 1024
+            "maxLength": 1024,
+            "format": "uri",
+            "description": "External identity verification link."
           },
           "livenessLink": {
             "type": "string",
             "nullable": false,
-            "maxLength": 1024
+            "maxLength": 1024,
+            "format": "uri",
+            "description": "External liveness verification link."
           },
           "compliance": {
+            "type": "object",
             "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/IndividualComplianceResponseDto"
+            "description": "Canonical structured compliance values stored for the individual.",
+            "properties": {
+              "sourceOfFunds": {
+                "type": "string",
+                "enum": [
+                  "SALARY",
+                  "SELF_EMPLOYMENT",
+                  "PENSION",
+                  "SAVINGS",
+                  "SALE_OF_PROPERTY",
+                  "SALE_OF_INVESTMENTS",
+                  "INVESTMENT_RETURNS",
+                  "INHERITANCE",
+                  "GIFT_OR_FAMILY_SUPPORT",
+                  "LOAN_OR_CREDIT",
+                  "INSURANCE_SETTLEMENT",
+                  "GOVERNMENT_BENEFITS",
+                  "CRYPTO_DISPOSALS",
+                  "GAMBLING_WINNINGS",
+                  "OTHER"
+                ],
+                "description": "Source of funds. Allowed values: SALARY = Salary / employment income; SELF_EMPLOYMENT = Self-employment / freelance income; PENSION = Pension; SAVINGS = Personal savings; SALE_OF_PROPERTY = Sale of property; SALE_OF_INVESTMENTS = Sale of investments / securities; INVESTMENT_RETURNS = Investment returns (dividends, interest); INHERITANCE = Inheritance; GIFT_OR_FAMILY_SUPPORT = Gift / family support; LOAN_OR_CREDIT = Loan or line of credit; INSURANCE_SETTLEMENT = Insurance settlement; GOVERNMENT_BENEFITS = Government benefits; CRYPTO_DISPOSALS = Disposal of crypto-assets; GAMBLING_WINNINGS = Gambling / lottery winnings; OTHER = Other (not listed)."
+              },
+              "sourceOfFundsDetails": {
+                "type": "string",
+                "description": "Original narrative when sourceOfFunds is OTHER.",
+                "maxLength": 1024
+              },
+              "purpose": {
+                "type": "string",
+                "enum": [
+                  "OPERATIONAL_ACCOUNT",
+                  "SALARY",
+                  "INVESTMENT",
+                  "TREASURY_MANAGEMENT",
+                  "ON_OFF_RAMP",
+                  "INTERNATIONAL_PAYMENTS",
+                  "OTHER"
+                ],
+                "description": "Purpose of the relationship. Allowed values: OPERATIONAL_ACCOUNT = Operational account; SALARY = Salary; INVESTMENT = Investment; TREASURY_MANAGEMENT = Treasury management; ON_OFF_RAMP = On/Off-ramp (fiat <-> crypto); INTERNATIONAL_PAYMENTS = International payments / remittance; OTHER = Other (not listed - please specify)."
+              },
+              "purposeDetails": {
+                "type": "string",
+                "description": "Original narrative when purpose is OTHER.",
+                "maxLength": 1024
+              },
+              "expectedYearlyTxCount": {
+                "type": "string",
+                "enum": [
+                  "LT_50",
+                  "B_50_500",
+                  "B_500_5000",
+                  "B_5000_50000",
+                  "GT_50000"
+                ],
+                "description": "Expected yearly transaction count. Allowed values: LT_50 = < 50 transactions / year; B_50_500 = 50 - 500 transactions / year; B_500_5000 = 500 - 5,000 transactions / year; B_5000_50000 = 5,000 - 50,000 transactions / year; GT_50000 = > 50,000 transactions / year.",
+                "example": "B_50_500"
+              },
+              "geographicScope": {
+                "type": "array",
+                "description": "Countries accounting for more than 20% of expected flows and their direction.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "countryCode",
+                    "direction"
+                  ],
+                  "properties": {
+                    "countryCode": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 2,
+                      "example": "FR"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "SEND",
+                        "RECEIVE",
+                        "BOTH"
+                      ],
+                      "description": "SEND = outbound; RECEIVE = inbound; BOTH = inbound and outbound.",
+                      "example": "BOTH"
+                    }
+                  }
+                }
+              },
+              "productsSubscribed": {
+                "type": "array",
+                "description": "Products selected by the customer.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "DIRECT_MINT_BURN",
+                    "EUR_ACCOUNT",
+                    "FX_SWAP"
+                  ]
+                },
+                "example": [
+                  "EUR_ACCOUNT"
+                ]
+              },
+              "profession": {
+                "type": "string",
+                "enum": [
+                  "FARM_SMALL",
+                  "FARM_MEDIUM",
+                  "FARM_LARGE",
+                  "CRAFT_FOOD",
+                  "CRAFT_METAL",
+                  "CRAFT_TEXTILE",
+                  "CRAFT_WOOD",
+                  "CRAFT_OTHER_MANUFACTURING",
+                  "CRAFT_CONSTRUCTION",
+                  "CRAFT_REPAIRS",
+                  "CRAFT_OTHER_SERVICES",
+                  "CRAFT_EQUIVALENT",
+                  "CRAFT_JEWELLER",
+                  "MGR_PUBLIC_SECTOR",
+                  "MGR_ARMED_FORCES",
+                  "MGR_MAGISTRATES",
+                  "MGR_SENIOR_EXEC",
+                  "MGR_ADMIN",
+                  "MGR_SALES",
+                  "MGR_BANKING",
+                  "MGR_HOSPITALITY",
+                  "MGR_REAL_ESTATE",
+                  "MGR_LAWYERS",
+                  "MGR_NOTARIES",
+                  "MGR_ENGINEERS",
+                  "MGR_AVIATION_NAVY",
+                  "BIZ_OWNER_LARGE",
+                  "BIZ_OWNER_MEDIUM",
+                  "BIZ_OWNER_SMALL",
+                  "RETAIL_SMALL",
+                  "RETAIL_CAFE_HOTEL",
+                  "RETAIL_MEDIUM",
+                  "RETAIL_OTHER_SERVICES",
+                  "RETAIL_AGENTS",
+                  "RETAIL_PRECIOUS_METALS",
+                  "RETAIL_ART_ANTIQUES",
+                  "RETAIL_MONEY_SERVICES",
+                  "RETAIL_GAMBLING",
+                  "RETAIL_ARMS",
+                  "EMP_CIVIL_PUBLIC",
+                  "EMP_CIVIL_PRIVATE",
+                  "EMP_POLICE_MILITARY",
+                  "EMP_CORPORATE_ADMIN",
+                  "EMP_RETAIL_SALES",
+                  "EMP_PERSONAL_SERVICE",
+                  "EDU_PROFESSOR_HIGHER_PRIVATE",
+                  "EDU_PROFESSOR_HIGHER",
+                  "EDU_RESEARCHERS",
+                  "EDU_SCHOOLTEACHERS",
+                  "EDU_SCHOOLTEACHERS_PRIVATE",
+                  "STUDENT",
+                  "UNEMPLOYED",
+                  "MANUAL_SKILLED",
+                  "MANUAL_DRIVERS",
+                  "MANUAL_UNSKILLED",
+                  "MANUAL_AGRICULTURAL",
+                  "INFO_ARTS_INFORMATION",
+                  "INFO_ARTS_PRESS_EXEC",
+                  "INFO_ARTS_ARTISTIC",
+                  "INTER_HEALTH_SOCIAL",
+                  "INTER_CLERGY",
+                  "INTER_PUBLIC_ADMIN",
+                  "INTER_CORPORATE_ADMIN",
+                  "INTER_TECHNICIANS",
+                  "INTER_PUBLIC_WORKS_TECH",
+                  "INTER_LAB_TECH",
+                  "INTER_FOREMEN",
+                  "LIB_SPECIALIST_DOCTORS",
+                  "LIB_GP",
+                  "LIB_DENTAL",
+                  "LIB_PSYCHOLOGISTS",
+                  "LIB_VETERINARIANS",
+                  "LIB_PHARMACISTS",
+                  "LIB_EDU_PSYCHOLOGISTS",
+                  "LIB_LAWYERS",
+                  "LIB_NOTARIES",
+                  "LIB_ECON_EXPERTS",
+                  "LIB_ACCOUNTANTS",
+                  "LIB_ENGINEERS_CONSULTANTS",
+                  "LIB_CONSULTING_ENGINEERS",
+                  "LIB_ARCHITECTS",
+                  "LIB_BAILIFFS",
+                  "LIB_FAMILY_HELPERS",
+                  "LIB_HEALTH_SOCIAL",
+                  "LIB_CORPORATE_ADMIN",
+                  "MED_SALARIED_DOCTORS",
+                  "MED_SALARIED_INTERN",
+                  "MED_SALARIED_PHARMACISTS",
+                  "MED_SALARIED_PSYCHOLOGISTS",
+                  "MED_SALARIED_DENTAL",
+                  "MED_SALARIED_VETERINARIANS",
+                  "RETIRED",
+                  "CRYPTO_PROFESSIONAL",
+                  "OTHER"
+                ],
+                "description": "Profession taxonomy leaf code. Allowed values: FARM_SMALL = Farmers — Small-scale farmer; FARM_MEDIUM = Farmers — Medium-scale farmer; FARM_LARGE = Farmers — Large-scale farmer; CRAFT_FOOD = Craftsmen & similar — Food craftsmen (baker, butcher…); CRAFT_METAL = Craftsmen & similar — Craftsmen in metals, mechanics, electrical; CRAFT_TEXTILE = Craftsmen & similar — Craftsmen in textiles, clothing, leather; CRAFT_WOOD = Craftsmen & similar — Craftsmen in wood, furniture; CRAFT_OTHER_MANUFACTURING = Craftsmen & similar — Craftsmen — other manufacturing; CRAFT_CONSTRUCTION = Craftsmen & similar — Craftsmen in construction/building; CRAFT_REPAIRS = Craftsmen & similar — Craftsmen in repairs; CRAFT_OTHER_SERVICES = Craftsmen & similar — Craftsmen — other services; CRAFT_EQUIVALENT = Craftsmen & similar — Craftsmen-equivalent; CRAFT_JEWELLER = Craftsmen & similar — Jeweller / goldsmith; MGR_PUBLIC_SECTOR = Managers & executives — Public-sector managers; MGR_ARMED_FORCES = Managers & executives — Armed-forces / gendarmerie officers (excl. generals); MGR_MAGISTRATES = Managers & executives — Magistrates; MGR_SENIOR_EXEC = Managers & executives — Senior executives of large companies; MGR_ADMIN = Managers & executives — Administration & management executives; MGR_SALES = Managers & executives — Sales & advertising executives; MGR_BANKING = Managers & executives — Banking & insurance executives; MGR_HOSPITALITY = Managers & executives — Hospitality & catering managers; MGR_REAL_ESTATE = Managers & executives — Real-estate agent / property manager / broker (salaried); MGR_LAWYERS = Managers & executives — Lawyers, legal & tax advisers (salaried); MGR_NOTARIES = Managers & executives — Salaried notaries; MGR_ENGINEERS = Managers & executives — Engineers & technical managers; MGR_AVIATION_NAVY = Managers & executives — Civil-aviation & merchant-navy officers / flight crew; BIZ_OWNER_LARGE = Business owners / directors (10+ employees) — Head of large company (500+ employees); BIZ_OWNER_MEDIUM = Business owners / directors (10+ employees) — Head of medium company (50–499 employees); BIZ_OWNER_SMALL = Business owners / directors (10+ employees) — Head of company (10–49 employees); RETAIL_SMALL = Retailers & similar (0–9 employees) — Small retailers (0–2 employees); RETAIL_CAFE_HOTEL = Retailers & similar (0–9 employees) — Café / hotel / restaurant owners (0–2 employees); RETAIL_MEDIUM = Retailers & similar (0–9 employees) — Medium retailers (3–9 employees); RETAIL_OTHER_SERVICES = Retailers & similar (0–9 employees) — Retailers — other services; RETAIL_AGENTS = Retailers & similar (0–9 employees) — Insurance / real-estate / travel agents (independent); RETAIL_PRECIOUS_METALS = Retailers & similar (0–9 employees) — Dealer in precious metals, stones or jewellery; RETAIL_ART_ANTIQUES = Retailers & similar (0–9 employees) — Dealer in art, antiques or high-value goods; RETAIL_MONEY_SERVICES = Retailers & similar (0–9 employees) — Money-services / currency-exchange professional; RETAIL_GAMBLING = Retailers & similar (0–9 employees) — Gambling, betting or casino professional; RETAIL_ARMS = Retailers & similar (0–9 employees) — Arms / defence / dual-use goods dealer; EMP_CIVIL_PUBLIC = Employees — Civil employees / public-sector agents; EMP_CIVIL_PRIVATE = Employees — Civil employees & service agents, private sector; EMP_POLICE_MILITARY = Employees — Police, military; EMP_CORPORATE_ADMIN = Employees — Corporate administrative employees; EMP_RETAIL_SALES = Employees — Retail / sales employees; EMP_PERSONAL_SERVICE = Employees — Personal-service staff; EDU_PROFESSOR_HIGHER_PRIVATE = Education / Research — Professor / head of institution / inspector / higher-ed teacher (private); EDU_PROFESSOR_HIGHER = Education / Research — Professor / head of institution / inspector / teacher; EDU_RESEARCHERS = Education / Research — Public-research researchers, civil-service engineers; EDU_SCHOOLTEACHERS = Education / Research — Schoolteachers & similar; EDU_SCHOOLTEACHERS_PRIVATE = Education / Research — Schoolteachers (private); STUDENT = Student; UNEMPLOYED = Unemployed; MANUAL_SKILLED = Manual workers — Skilled workers; MANUAL_DRIVERS = Manual workers — Drivers; MANUAL_UNSKILLED = Manual workers — Unskilled workers; MANUAL_AGRICULTURAL = Manual workers — Agricultural workers & similar; INFO_ARTS_INFORMATION = Information & arts professions — Information professions; INFO_ARTS_PRESS_EXEC = Information & arts professions — Press, arts & entertainment executives; INFO_ARTS_ARTISTIC = Information & arts professions — Artistic professions; INTER_HEALTH_SOCIAL = Intermediate professions — Health & social-work professions; INTER_CLERGY = Intermediate professions — Clergy, religious; INTER_PUBLIC_ADMIN = Intermediate professions — Public-sector administrative professions; INTER_CORPORATE_ADMIN = Intermediate professions — Corporate administrative & commercial professions; INTER_TECHNICIANS = Intermediate professions — Technicians; INTER_PUBLIC_WORKS_TECH = Intermediate professions — Public-works technicians (state & local authorities); INTER_LAB_TECH = Intermediate professions — Lab / research technicians (public service & education); INTER_FOREMEN = Intermediate professions — Foremen, supervisors; LIB_SPECIALIST_DOCTORS = Liberal professions / self-employed — Specialist doctors; LIB_GP = Liberal professions / self-employed — General practitioners (self-employed); LIB_DENTAL = Liberal professions / self-employed — Dental surgeons; LIB_PSYCHOLOGISTS = Liberal professions / self-employed — Psychologists, psychoanalysts; LIB_VETERINARIANS = Liberal professions / self-employed — Veterinarians; LIB_PHARMACISTS = Liberal professions / self-employed — Pharmacists (0–9 employees); LIB_EDU_PSYCHOLOGISTS = Liberal professions / self-employed — Educational / career psychologists (self-employed); LIB_LAWYERS = Liberal professions / self-employed — Lawyers, legal & tax advisers; LIB_NOTARIES = Liberal professions / self-employed — Notaries; LIB_ECON_EXPERTS = Liberal professions / self-employed — Economics / tax / HR experts (self-employed); LIB_ACCOUNTANTS = Liberal professions / self-employed — Chartered / certified accountants; LIB_ENGINEERS_CONSULTANTS = Liberal professions / self-employed — Independent engineers, consultants; LIB_CONSULTING_ENGINEERS = Liberal professions / self-employed — Consulting engineers (technical studies); LIB_ARCHITECTS = Liberal professions / self-employed — Architects; LIB_BAILIFFS = Liberal professions / self-employed — Bailiffs, ministerial officers, legal experts; LIB_FAMILY_HELPERS = Liberal professions / self-employed — Family helpers; LIB_HEALTH_SOCIAL = Liberal professions / self-employed — Health & social-work professions (self-employed); LIB_CORPORATE_ADMIN = Liberal professions / self-employed — Corporate administrative / commercial professions (self-employed); MED_SALARIED_DOCTORS = Medical professions (salaried) — Salaried doctors / interns without private practice; MED_SALARIED_INTERN = Medical professions (salaried) — Trainee / hospital intern; MED_SALARIED_PHARMACISTS = Medical professions (salaried) — Pharmacists (salaried); MED_SALARIED_PSYCHOLOGISTS = Medical professions (salaried) — School / professional psychologists; MED_SALARIED_DENTAL = Medical professions (salaried) — Dental surgeons (salaried); MED_SALARIED_VETERINARIANS = Medical professions (salaried) — Veterinarians (salaried); RETIRED = Retired; CRYPTO_PROFESSIONAL = Crypto & other activities — Crypto-asset professional / trader; OTHER = Crypto & other activities — Other (please specify).",
+                "example": "EMP_CORPORATE_ADMIN"
+              },
+              "professionOther": {
+                "type": "string",
+                "description": "Profession detail for OTHER, RETIRED, or UNEMPLOYED.",
+                "maxLength": 255
+              },
+              "professionCategory": {
+                "type": "string",
+                "enum": [
+                  "FARMERS",
+                  "CRAFTSMEN",
+                  "MANAGERS",
+                  "BUSINESS_OWNERS",
+                  "RETAILERS",
+                  "EMPLOYEES",
+                  "EDUCATION_RESEARCH",
+                  "STUDENTS",
+                  "UNEMPLOYED",
+                  "MANUAL_WORKERS",
+                  "INFO_ARTS",
+                  "INTERMEDIATE",
+                  "LIBERAL",
+                  "MEDICAL_SALARIED",
+                  "RETIRED",
+                  "CRYPTO_OTHER"
+                ],
+                "description": "Derived top-level profession category. Allowed values: FARMERS = Farmers; CRAFTSMEN = Craftsmen & similar; MANAGERS = Managers & executives; BUSINESS_OWNERS = Business owners / directors (10+ employees); RETAILERS = Retailers & similar (0–9 employees); EMPLOYEES = Employees; EDUCATION_RESEARCH = Education / Research; STUDENTS = Student; UNEMPLOYED = Unemployed; MANUAL_WORKERS = Manual workers; INFO_ARTS = Information & arts professions; INTERMEDIATE = Intermediate professions; LIBERAL = Liberal professions / self-employed; MEDICAL_SALARIED = Medical professions (salaried); RETIRED = Retired; CRYPTO_OTHER = Crypto & other activities.",
+                "example": "EMPLOYEES"
+              },
+              "annualRevenue": {
+                "type": "string",
+                "enum": [
+                  "LT_25K",
+                  "B_25K_50K",
+                  "B_50K_100K",
+                  "B_100K_250K",
+                  "B_250K_500K",
+                  "GT_500K"
+                ],
+                "description": "Annual revenue. Allowed values: LT_25K = < €25,000; B_25K_50K = €25,000 - €50,000; B_50K_100K = €50,000 - €100,000; B_100K_250K = €100,000 - €250,000; B_250K_500K = €250,000 - €500,000; GT_500K = > €500,000."
+              },
+              "estimatedWealth": {
+                "type": "string",
+                "enum": [
+                  "LT_50K",
+                  "B_50K_250K",
+                  "B_250K_1M",
+                  "B_1M_5M",
+                  "GT_5M"
+                ],
+                "description": "Estimated net wealth. Allowed values: LT_50K = < €50,000; B_50K_250K = €50,000 - €250,000; B_250K_1M = €250,000 - €1,000,000; B_1M_5M = €1,000,000 - €5,000,000; GT_5M = > €5,000,000."
+              },
+              "expectedYearlyVolume": {
+                "type": "string",
+                "enum": [
+                  "LT_10K",
+                  "B_10K_50K",
+                  "B_50K_250K",
+                  "B_250K_1M",
+                  "B_1M_5M",
+                  "GT_5M"
+                ],
+                "description": "Expected yearly transaction volume. Allowed values: LT_10K = < €10,000; B_10K_50K = €10,000 - €50,000; B_50K_250K = €50,000 - €250,000; B_250K_1M = €250,000 - €1,000,000; B_1M_5M = €1,000,000 - €5,000,000; GT_5M = > €5,000,000."
               }
-            ]
+            }
           },
           "physicalAddress": {
+            "type": "object",
             "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PhysicalAddressResponseDto"
+            "required": [
+              "addressLine1",
+              "city",
+              "zipCode",
+              "countryCode"
+            ],
+            "properties": {
+              "addressLine1": {
+                "type": "string",
+                "description": "Street address line 1",
+                "example": "12 Rue de Rivoli"
+              },
+              "addressLine2": {
+                "type": "string",
+                "description": "Street address line 2",
+                "example": "Bâtiment B"
+              },
+              "city": {
+                "type": "string",
+                "description": "City",
+                "example": "Paris"
+              },
+              "zipCode": {
+                "type": "string",
+                "description": "Postal/ZIP code",
+                "example": "75001"
+              },
+              "countryCode": {
+                "type": "string",
+                "description": "ISO 3166-1 alpha-2 country code",
+                "example": "FR",
+                "minLength": 2,
+                "maxLength": 2
               }
-            ]
+            },
+            "description": "Structured residential physical address."
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Individual creation timestamp."
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Individual update timestamp."
           }
         },
         "required": [
@@ -173,7 +514,6 @@
           "kycVerificationLink",
           "livenessLink",
           "compliance",
-          "physicalAddress",
           "createdAt",
           "updatedAt"
         ]

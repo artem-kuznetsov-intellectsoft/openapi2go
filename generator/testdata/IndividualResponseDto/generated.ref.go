@@ -1,39 +1,293 @@
 package generated
 
-import "time"
+import "github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 
-type IndividualComplianceResponseDto struct{}
+// DocumentType represents the identity document type. NOT_PROVIDED is a legacy response value and cannot be submitted for new records.
+type DocumentType string
 
-type PhysicalAddressResponseDto struct{}
+const (
+	DocumentTypeID               DocumentType = "ID"
+	DocumentTypePASSPORT         DocumentType = "PASSPORT"
+	DocumentTypeRESIDENCY_PERMIT DocumentType = "RESIDENCY_PERMIT"
+	DocumentTypeNOT_PROVIDED     DocumentType = "NOT_PROVIDED"
+)
+
+// AnnualRevenue represents the annual revenue. Allowed values: LT_25K = < €25,000; B_25K_50K = €25,000 - €50,000; B_50K_100K = €50,000 - €100,000; B_100K_250K = €100,000 - €250,000; B_250K_500K = €250,000 - €500,000; GT_500K = > €500,000.
+type AnnualRevenue string
+
+const (
+	AnnualRevenueLT_25K      AnnualRevenue = "LT_25K"
+	AnnualRevenueB_25K_50K   AnnualRevenue = "B_25K_50K"
+	AnnualRevenueB_50K_100K  AnnualRevenue = "B_50K_100K"
+	AnnualRevenueB_100K_250K AnnualRevenue = "B_100K_250K"
+	AnnualRevenueB_250K_500K AnnualRevenue = "B_250K_500K"
+	AnnualRevenueGT_500K     AnnualRevenue = "GT_500K"
+)
+
+// EstimatedWealth represents the estimated net wealth. Allowed values: LT_50K = < €50,000; B_50K_250K = €50,000 - €250,000; B_250K_1M = €250,000 - €1,000,000; B_1M_5M = €1,000,000 - €5,000,000; GT_5M = > €5,000,000.
+type EstimatedWealth string
+
+const (
+	EstimatedWealthLT_50K     EstimatedWealth = "LT_50K"
+	EstimatedWealthB_50K_250K EstimatedWealth = "B_50K_250K"
+	EstimatedWealthB_250K_1M  EstimatedWealth = "B_250K_1M"
+	EstimatedWealthB_1M_5M    EstimatedWealth = "B_1M_5M"
+	EstimatedWealthGT_5M      EstimatedWealth = "GT_5M"
+)
+
+// ExpectedYearlyTxCount represents the expected yearly transaction count. Allowed values: LT_50 = < 50 transactions / year; B_50_500 = 50 - 500 transactions / year; B_500_5000 = 500 - 5,000 transactions / year; B_5000_50000 = 5,000 - 50,000 transactions / year; GT_50000 = > 50,000 transactions / year.
+type ExpectedYearlyTxCount string
+
+const (
+	ExpectedYearlyTxCountLT_50        ExpectedYearlyTxCount = "LT_50"
+	ExpectedYearlyTxCountB_50_500     ExpectedYearlyTxCount = "B_50_500"
+	ExpectedYearlyTxCountB_500_5000   ExpectedYearlyTxCount = "B_500_5000"
+	ExpectedYearlyTxCountB_5000_50000 ExpectedYearlyTxCount = "B_5000_50000"
+	ExpectedYearlyTxCountGT_50000     ExpectedYearlyTxCount = "GT_50000"
+)
+
+// ExpectedYearlyVolume represents the expected yearly transaction volume. Allowed values: LT_10K = < €10,000; B_10K_50K = €10,000 - €50,000; B_50K_250K = €50,000 - €250,000; B_250K_1M = €250,000 - €1,000,000; B_1M_5M = €1,000,000 - €5,000,000; GT_5M = > €5,000,000.
+type ExpectedYearlyVolume string
+
+const (
+	ExpectedYearlyVolumeLT_10K     ExpectedYearlyVolume = "LT_10K"
+	ExpectedYearlyVolumeB_10K_50K  ExpectedYearlyVolume = "B_10K_50K"
+	ExpectedYearlyVolumeB_50K_250K ExpectedYearlyVolume = "B_50K_250K"
+	ExpectedYearlyVolumeB_250K_1M  ExpectedYearlyVolume = "B_250K_1M"
+	ExpectedYearlyVolumeB_1M_5M    ExpectedYearlyVolume = "B_1M_5M"
+	ExpectedYearlyVolumeGT_5M      ExpectedYearlyVolume = "GT_5M"
+)
+
+type ProductsSubscribed string
+
+const (
+	ProductsSubscribedDIRECT_MINT_BURN ProductsSubscribed = "DIRECT_MINT_BURN"
+	ProductsSubscribedEUR_ACCOUNT      ProductsSubscribed = "EUR_ACCOUNT"
+	ProductsSubscribedFX_SWAP          ProductsSubscribed = "FX_SWAP"
+)
+
+// Profession represents the profession taxonomy leaf code. Allowed values: FARM_SMALL = Farmers — Small-scale farmer; FARM_MEDIUM = Farmers — Medium-scale farmer; FARM_LARGE = Farmers — Large-scale farmer; CRAFT_FOOD = Craftsmen & similar — Food craftsmen (baker, butcher…); CRAFT_METAL = Craftsmen & similar — Craftsmen in metals, mechanics, electrical; CRAFT_TEXTILE = Craftsmen & similar — Craftsmen in textiles, clothing, leather; CRAFT_WOOD = Craftsmen & similar — Craftsmen in wood, furniture; CRAFT_OTHER_MANUFACTURING = Craftsmen & similar — Craftsmen — other manufacturing; CRAFT_CONSTRUCTION = Craftsmen & similar — Craftsmen in construction/building; CRAFT_REPAIRS = Craftsmen & similar — Craftsmen in repairs; CRAFT_OTHER_SERVICES = Craftsmen & similar — Craftsmen — other services; CRAFT_EQUIVALENT = Craftsmen & similar — Craftsmen-equivalent; CRAFT_JEWELLER = Craftsmen & similar — Jeweller / goldsmith; MGR_PUBLIC_SECTOR = Managers & executives — Public-sector managers; MGR_ARMED_FORCES = Managers & executives — Armed-forces / gendarmerie officers (excl. generals); MGR_MAGISTRATES = Managers & executives — Magistrates; MGR_SENIOR_EXEC = Managers & executives — Senior executives of large companies; MGR_ADMIN = Managers & executives — Administration & management executives; MGR_SALES = Managers & executives — Sales & advertising executives; MGR_BANKING = Managers & executives — Banking & insurance executives; MGR_HOSPITALITY = Managers & executives — Hospitality & catering managers; MGR_REAL_ESTATE = Managers & executives — Real-estate agent / property manager / broker (salaried); MGR_LAWYERS = Managers & executives — Lawyers, legal & tax advisers (salaried); MGR_NOTARIES = Managers & executives — Salaried notaries; MGR_ENGINEERS = Managers & executives — Engineers & technical managers; MGR_AVIATION_NAVY = Managers & executives — Civil-aviation & merchant-navy officers / flight crew; BIZ_OWNER_LARGE = Business owners / directors (10+ employees) — Head of large company (500+ employees); BIZ_OWNER_MEDIUM = Business owners / directors (10+ employees) — Head of medium company (50–499 employees); BIZ_OWNER_SMALL = Business owners / directors (10+ employees) — Head of company (10–49 employees); RETAIL_SMALL = Retailers & similar (0–9 employees) — Small retailers (0–2 employees); RETAIL_CAFE_HOTEL = Retailers & similar (0–9 employees) — Café / hotel / restaurant owners (0–2 employees); RETAIL_MEDIUM = Retailers & similar (0–9 employees) — Medium retailers (3–9 employees); RETAIL_OTHER_SERVICES = Retailers & similar (0–9 employees) — Retailers — other services; RETAIL_AGENTS = Retailers & similar (0–9 employees) — Insurance / real-estate / travel agents (independent); RETAIL_PRECIOUS_METALS = Retailers & similar (0–9 employees) — Dealer in precious metals, stones or jewellery; RETAIL_ART_ANTIQUES = Retailers & similar (0–9 employees) — Dealer in art, antiques or high-value goods; RETAIL_MONEY_SERVICES = Retailers & similar (0–9 employees) — Money-services / currency-exchange professional; RETAIL_GAMBLING = Retailers & similar (0–9 employees) — Gambling, betting or casino professional; RETAIL_ARMS = Retailers & similar (0–9 employees) — Arms / defence / dual-use goods dealer; EMP_CIVIL_PUBLIC = Employees — Civil employees / public-sector agents; EMP_CIVIL_PRIVATE = Employees — Civil employees & service agents, private sector; EMP_POLICE_MILITARY = Employees — Police, military; EMP_CORPORATE_ADMIN = Employees — Corporate administrative employees; EMP_RETAIL_SALES = Employees — Retail / sales employees; EMP_PERSONAL_SERVICE = Employees — Personal-service staff; EDU_PROFESSOR_HIGHER_PRIVATE = Education / Research — Professor / head of institution / inspector / higher-ed teacher (private); EDU_PROFESSOR_HIGHER = Education / Research — Professor / head of institution / inspector / teacher; EDU_RESEARCHERS = Education / Research — Public-research researchers, civil-service engineers; EDU_SCHOOLTEACHERS = Education / Research — Schoolteachers & similar; EDU_SCHOOLTEACHERS_PRIVATE = Education / Research — Schoolteachers (private); STUDENT = Student; UNEMPLOYED = Unemployed; MANUAL_SKILLED = Manual workers — Skilled workers; MANUAL_DRIVERS = Manual workers — Drivers; MANUAL_UNSKILLED = Manual workers — Unskilled workers; MANUAL_AGRICULTURAL = Manual workers — Agricultural workers & similar; INFO_ARTS_INFORMATION = Information & arts professions — Information professions; INFO_ARTS_PRESS_EXEC = Information & arts professions — Press, arts & entertainment executives; INFO_ARTS_ARTISTIC = Information & arts professions — Artistic professions; INTER_HEALTH_SOCIAL = Intermediate professions — Health & social-work professions; INTER_CLERGY = Intermediate professions — Clergy, religious; INTER_PUBLIC_ADMIN = Intermediate professions — Public-sector administrative professions; INTER_CORPORATE_ADMIN = Intermediate professions — Corporate administrative & commercial professions; INTER_TECHNICIANS = Intermediate professions — Technicians; INTER_PUBLIC_WORKS_TECH = Intermediate professions — Public-works technicians (state & local authorities); INTER_LAB_TECH = Intermediate professions — Lab / research technicians (public service & education); INTER_FOREMEN = Intermediate professions — Foremen, supervisors; LIB_SPECIALIST_DOCTORS = Liberal professions / self-employed — Specialist doctors; LIB_GP = Liberal professions / self-employed — General practitioners (self-employed); LIB_DENTAL = Liberal professions / self-employed — Dental surgeons; LIB_PSYCHOLOGISTS = Liberal professions / self-employed — Psychologists, psychoanalysts; LIB_VETERINARIANS = Liberal professions / self-employed — Veterinarians; LIB_PHARMACISTS = Liberal professions / self-employed — Pharmacists (0–9 employees); LIB_EDU_PSYCHOLOGISTS = Liberal professions / self-employed — Educational / career psychologists (self-employed); LIB_LAWYERS = Liberal professions / self-employed — Lawyers, legal & tax advisers; LIB_NOTARIES = Liberal professions / self-employed — Notaries; LIB_ECON_EXPERTS = Liberal professions / self-employed — Economics / tax / HR experts (self-employed); LIB_ACCOUNTANTS = Liberal professions / self-employed — Chartered / certified accountants; LIB_ENGINEERS_CONSULTANTS = Liberal professions / self-employed — Independent engineers, consultants; LIB_CONSULTING_ENGINEERS = Liberal professions / self-employed — Consulting engineers (technical studies); LIB_ARCHITECTS = Liberal professions / self-employed — Architects; LIB_BAILIFFS = Liberal professions / self-employed — Bailiffs, ministerial officers, legal experts; LIB_FAMILY_HELPERS = Liberal professions / self-employed — Family helpers; LIB_HEALTH_SOCIAL = Liberal professions / self-employed — Health & social-work professions (self-employed); LIB_CORPORATE_ADMIN = Liberal professions / self-employed — Corporate administrative / commercial professions (self-employed); MED_SALARIED_DOCTORS = Medical professions (salaried) — Salaried doctors / interns without private practice; MED_SALARIED_INTERN = Medical professions (salaried) — Trainee / hospital intern; MED_SALARIED_PHARMACISTS = Medical professions (salaried) — Pharmacists (salaried); MED_SALARIED_PSYCHOLOGISTS = Medical professions (salaried) — School / professional psychologists; MED_SALARIED_DENTAL = Medical professions (salaried) — Dental surgeons (salaried); MED_SALARIED_VETERINARIANS = Medical professions (salaried) — Veterinarians (salaried); RETIRED = Retired; CRYPTO_PROFESSIONAL = Crypto & other activities — Crypto-asset professional / trader; OTHER = Crypto & other activities — Other (please specify).
+type Profession string
+
+const (
+	ProfessionFARM_SMALL                   Profession = "FARM_SMALL"
+	ProfessionFARM_MEDIUM                  Profession = "FARM_MEDIUM"
+	ProfessionFARM_LARGE                   Profession = "FARM_LARGE"
+	ProfessionCRAFT_FOOD                   Profession = "CRAFT_FOOD"
+	ProfessionCRAFT_METAL                  Profession = "CRAFT_METAL"
+	ProfessionCRAFT_TEXTILE                Profession = "CRAFT_TEXTILE"
+	ProfessionCRAFT_WOOD                   Profession = "CRAFT_WOOD"
+	ProfessionCRAFT_OTHER_MANUFACTURING    Profession = "CRAFT_OTHER_MANUFACTURING"
+	ProfessionCRAFT_CONSTRUCTION           Profession = "CRAFT_CONSTRUCTION"
+	ProfessionCRAFT_REPAIRS                Profession = "CRAFT_REPAIRS"
+	ProfessionCRAFT_OTHER_SERVICES         Profession = "CRAFT_OTHER_SERVICES"
+	ProfessionCRAFT_EQUIVALENT             Profession = "CRAFT_EQUIVALENT"
+	ProfessionCRAFT_JEWELLER               Profession = "CRAFT_JEWELLER"
+	ProfessionMGR_PUBLIC_SECTOR            Profession = "MGR_PUBLIC_SECTOR"
+	ProfessionMGR_ARMED_FORCES             Profession = "MGR_ARMED_FORCES"
+	ProfessionMGR_MAGISTRATES              Profession = "MGR_MAGISTRATES"
+	ProfessionMGR_SENIOR_EXEC              Profession = "MGR_SENIOR_EXEC"
+	ProfessionMGR_ADMIN                    Profession = "MGR_ADMIN"
+	ProfessionMGR_SALES                    Profession = "MGR_SALES"
+	ProfessionMGR_BANKING                  Profession = "MGR_BANKING"
+	ProfessionMGR_HOSPITALITY              Profession = "MGR_HOSPITALITY"
+	ProfessionMGR_REAL_ESTATE              Profession = "MGR_REAL_ESTATE"
+	ProfessionMGR_LAWYERS                  Profession = "MGR_LAWYERS"
+	ProfessionMGR_NOTARIES                 Profession = "MGR_NOTARIES"
+	ProfessionMGR_ENGINEERS                Profession = "MGR_ENGINEERS"
+	ProfessionMGR_AVIATION_NAVY            Profession = "MGR_AVIATION_NAVY"
+	ProfessionBIZ_OWNER_LARGE              Profession = "BIZ_OWNER_LARGE"
+	ProfessionBIZ_OWNER_MEDIUM             Profession = "BIZ_OWNER_MEDIUM"
+	ProfessionBIZ_OWNER_SMALL              Profession = "BIZ_OWNER_SMALL"
+	ProfessionRETAIL_SMALL                 Profession = "RETAIL_SMALL"
+	ProfessionRETAIL_CAFE_HOTEL            Profession = "RETAIL_CAFE_HOTEL"
+	ProfessionRETAIL_MEDIUM                Profession = "RETAIL_MEDIUM"
+	ProfessionRETAIL_OTHER_SERVICES        Profession = "RETAIL_OTHER_SERVICES"
+	ProfessionRETAIL_AGENTS                Profession = "RETAIL_AGENTS"
+	ProfessionRETAIL_PRECIOUS_METALS       Profession = "RETAIL_PRECIOUS_METALS"
+	ProfessionRETAIL_ART_ANTIQUES          Profession = "RETAIL_ART_ANTIQUES"
+	ProfessionRETAIL_MONEY_SERVICES        Profession = "RETAIL_MONEY_SERVICES"
+	ProfessionRETAIL_GAMBLING              Profession = "RETAIL_GAMBLING"
+	ProfessionRETAIL_ARMS                  Profession = "RETAIL_ARMS"
+	ProfessionEMP_CIVIL_PUBLIC             Profession = "EMP_CIVIL_PUBLIC"
+	ProfessionEMP_CIVIL_PRIVATE            Profession = "EMP_CIVIL_PRIVATE"
+	ProfessionEMP_POLICE_MILITARY          Profession = "EMP_POLICE_MILITARY"
+	ProfessionEMP_CORPORATE_ADMIN          Profession = "EMP_CORPORATE_ADMIN"
+	ProfessionEMP_RETAIL_SALES             Profession = "EMP_RETAIL_SALES"
+	ProfessionEMP_PERSONAL_SERVICE         Profession = "EMP_PERSONAL_SERVICE"
+	ProfessionEDU_PROFESSOR_HIGHER_PRIVATE Profession = "EDU_PROFESSOR_HIGHER_PRIVATE"
+	ProfessionEDU_PROFESSOR_HIGHER         Profession = "EDU_PROFESSOR_HIGHER"
+	ProfessionEDU_RESEARCHERS              Profession = "EDU_RESEARCHERS"
+	ProfessionEDU_SCHOOLTEACHERS           Profession = "EDU_SCHOOLTEACHERS"
+	ProfessionEDU_SCHOOLTEACHERS_PRIVATE   Profession = "EDU_SCHOOLTEACHERS_PRIVATE"
+	ProfessionSTUDENT                      Profession = "STUDENT"
+	ProfessionUNEMPLOYED                   Profession = "UNEMPLOYED"
+	ProfessionMANUAL_SKILLED               Profession = "MANUAL_SKILLED"
+	ProfessionMANUAL_DRIVERS               Profession = "MANUAL_DRIVERS"
+	ProfessionMANUAL_UNSKILLED             Profession = "MANUAL_UNSKILLED"
+	ProfessionMANUAL_AGRICULTURAL          Profession = "MANUAL_AGRICULTURAL"
+	ProfessionINFO_ARTS_INFORMATION        Profession = "INFO_ARTS_INFORMATION"
+	ProfessionINFO_ARTS_PRESS_EXEC         Profession = "INFO_ARTS_PRESS_EXEC"
+	ProfessionINFO_ARTS_ARTISTIC           Profession = "INFO_ARTS_ARTISTIC"
+	ProfessionINTER_HEALTH_SOCIAL          Profession = "INTER_HEALTH_SOCIAL"
+	ProfessionINTER_CLERGY                 Profession = "INTER_CLERGY"
+	ProfessionINTER_PUBLIC_ADMIN           Profession = "INTER_PUBLIC_ADMIN"
+	ProfessionINTER_CORPORATE_ADMIN        Profession = "INTER_CORPORATE_ADMIN"
+	ProfessionINTER_TECHNICIANS            Profession = "INTER_TECHNICIANS"
+	ProfessionINTER_PUBLIC_WORKS_TECH      Profession = "INTER_PUBLIC_WORKS_TECH"
+	ProfessionINTER_LAB_TECH               Profession = "INTER_LAB_TECH"
+	ProfessionINTER_FOREMEN                Profession = "INTER_FOREMEN"
+	ProfessionLIB_SPECIALIST_DOCTORS       Profession = "LIB_SPECIALIST_DOCTORS"
+	ProfessionLIB_GP                       Profession = "LIB_GP"
+	ProfessionLIB_DENTAL                   Profession = "LIB_DENTAL"
+	ProfessionLIB_PSYCHOLOGISTS            Profession = "LIB_PSYCHOLOGISTS"
+	ProfessionLIB_VETERINARIANS            Profession = "LIB_VETERINARIANS"
+	ProfessionLIB_PHARMACISTS              Profession = "LIB_PHARMACISTS"
+	ProfessionLIB_EDU_PSYCHOLOGISTS        Profession = "LIB_EDU_PSYCHOLOGISTS"
+	ProfessionLIB_LAWYERS                  Profession = "LIB_LAWYERS"
+	ProfessionLIB_NOTARIES                 Profession = "LIB_NOTARIES"
+	ProfessionLIB_ECON_EXPERTS             Profession = "LIB_ECON_EXPERTS"
+	ProfessionLIB_ACCOUNTANTS              Profession = "LIB_ACCOUNTANTS"
+	ProfessionLIB_ENGINEERS_CONSULTANTS    Profession = "LIB_ENGINEERS_CONSULTANTS"
+	ProfessionLIB_CONSULTING_ENGINEERS     Profession = "LIB_CONSULTING_ENGINEERS"
+	ProfessionLIB_ARCHITECTS               Profession = "LIB_ARCHITECTS"
+	ProfessionLIB_BAILIFFS                 Profession = "LIB_BAILIFFS"
+	ProfessionLIB_FAMILY_HELPERS           Profession = "LIB_FAMILY_HELPERS"
+	ProfessionLIB_HEALTH_SOCIAL            Profession = "LIB_HEALTH_SOCIAL"
+	ProfessionLIB_CORPORATE_ADMIN          Profession = "LIB_CORPORATE_ADMIN"
+	ProfessionMED_SALARIED_DOCTORS         Profession = "MED_SALARIED_DOCTORS"
+	ProfessionMED_SALARIED_INTERN          Profession = "MED_SALARIED_INTERN"
+	ProfessionMED_SALARIED_PHARMACISTS     Profession = "MED_SALARIED_PHARMACISTS"
+	ProfessionMED_SALARIED_PSYCHOLOGISTS   Profession = "MED_SALARIED_PSYCHOLOGISTS"
+	ProfessionMED_SALARIED_DENTAL          Profession = "MED_SALARIED_DENTAL"
+	ProfessionMED_SALARIED_VETERINARIANS   Profession = "MED_SALARIED_VETERINARIANS"
+	ProfessionRETIRED                      Profession = "RETIRED"
+	ProfessionCRYPTO_PROFESSIONAL          Profession = "CRYPTO_PROFESSIONAL"
+	ProfessionOTHER                        Profession = "OTHER"
+)
+
+// ProfessionCategory represents the derived top-level profession category. Allowed values: FARMERS = Farmers; CRAFTSMEN = Craftsmen & similar; MANAGERS = Managers & executives; BUSINESS_OWNERS = Business owners / directors (10+ employees); RETAILERS = Retailers & similar (0–9 employees); EMPLOYEES = Employees; EDUCATION_RESEARCH = Education / Research; STUDENTS = Student; UNEMPLOYED = Unemployed; MANUAL_WORKERS = Manual workers; INFO_ARTS = Information & arts professions; INTERMEDIATE = Intermediate professions; LIBERAL = Liberal professions / self-employed; MEDICAL_SALARIED = Medical professions (salaried); RETIRED = Retired; CRYPTO_OTHER = Crypto & other activities.
+type ProfessionCategory string
+
+const (
+	ProfessionCategoryFARMERS            ProfessionCategory = "FARMERS"
+	ProfessionCategoryCRAFTSMEN          ProfessionCategory = "CRAFTSMEN"
+	ProfessionCategoryMANAGERS           ProfessionCategory = "MANAGERS"
+	ProfessionCategoryBUSINESS_OWNERS    ProfessionCategory = "BUSINESS_OWNERS"
+	ProfessionCategoryRETAILERS          ProfessionCategory = "RETAILERS"
+	ProfessionCategoryEMPLOYEES          ProfessionCategory = "EMPLOYEES"
+	ProfessionCategoryEDUCATION_RESEARCH ProfessionCategory = "EDUCATION_RESEARCH"
+	ProfessionCategorySTUDENTS           ProfessionCategory = "STUDENTS"
+	ProfessionCategoryUNEMPLOYED         ProfessionCategory = "UNEMPLOYED"
+	ProfessionCategoryMANUAL_WORKERS     ProfessionCategory = "MANUAL_WORKERS"
+	ProfessionCategoryINFO_ARTS          ProfessionCategory = "INFO_ARTS"
+	ProfessionCategoryINTERMEDIATE       ProfessionCategory = "INTERMEDIATE"
+	ProfessionCategoryLIBERAL            ProfessionCategory = "LIBERAL"
+	ProfessionCategoryMEDICAL_SALARIED   ProfessionCategory = "MEDICAL_SALARIED"
+	ProfessionCategoryRETIRED            ProfessionCategory = "RETIRED"
+	ProfessionCategoryCRYPTO_OTHER       ProfessionCategory = "CRYPTO_OTHER"
+)
+
+// Purpose represents the purpose of the relationship. Allowed values: OPERATIONAL_ACCOUNT = Operational account; SALARY = Salary; INVESTMENT = Investment; TREASURY_MANAGEMENT = Treasury management; ON_OFF_RAMP = On/Off-ramp (fiat <-> crypto); INTERNATIONAL_PAYMENTS = International payments / remittance; OTHER = Other (not listed - please specify).
+type Purpose string
+
+const (
+	PurposeOPERATIONAL_ACCOUNT    Purpose = "OPERATIONAL_ACCOUNT"
+	PurposeSALARY                 Purpose = "SALARY"
+	PurposeINVESTMENT             Purpose = "INVESTMENT"
+	PurposeTREASURY_MANAGEMENT    Purpose = "TREASURY_MANAGEMENT"
+	PurposeON_OFF_RAMP            Purpose = "ON_OFF_RAMP"
+	PurposeINTERNATIONAL_PAYMENTS Purpose = "INTERNATIONAL_PAYMENTS"
+	PurposeOTHER                  Purpose = "OTHER"
+)
+
+// SourceOfFunds represents the source of funds. Allowed values: SALARY = Salary / employment income; SELF_EMPLOYMENT = Self-employment / freelance income; PENSION = Pension; SAVINGS = Personal savings; SALE_OF_PROPERTY = Sale of property; SALE_OF_INVESTMENTS = Sale of investments / securities; INVESTMENT_RETURNS = Investment returns (dividends, interest); INHERITANCE = Inheritance; GIFT_OR_FAMILY_SUPPORT = Gift / family support; LOAN_OR_CREDIT = Loan or line of credit; INSURANCE_SETTLEMENT = Insurance settlement; GOVERNMENT_BENEFITS = Government benefits; CRYPTO_DISPOSALS = Disposal of crypto-assets; GAMBLING_WINNINGS = Gambling / lottery winnings; OTHER = Other (not listed).
+type SourceOfFunds string
+
+const (
+	SourceOfFundsSALARY                 SourceOfFunds = "SALARY"
+	SourceOfFundsSELF_EMPLOYMENT        SourceOfFunds = "SELF_EMPLOYMENT"
+	SourceOfFundsPENSION                SourceOfFunds = "PENSION"
+	SourceOfFundsSAVINGS                SourceOfFunds = "SAVINGS"
+	SourceOfFundsSALE_OF_PROPERTY       SourceOfFunds = "SALE_OF_PROPERTY"
+	SourceOfFundsSALE_OF_INVESTMENTS    SourceOfFunds = "SALE_OF_INVESTMENTS"
+	SourceOfFundsINVESTMENT_RETURNS     SourceOfFunds = "INVESTMENT_RETURNS"
+	SourceOfFundsINHERITANCE            SourceOfFunds = "INHERITANCE"
+	SourceOfFundsGIFT_OR_FAMILY_SUPPORT SourceOfFunds = "GIFT_OR_FAMILY_SUPPORT"
+	SourceOfFundsLOAN_OR_CREDIT         SourceOfFunds = "LOAN_OR_CREDIT"
+	SourceOfFundsINSURANCE_SETTLEMENT   SourceOfFunds = "INSURANCE_SETTLEMENT"
+	SourceOfFundsGOVERNMENT_BENEFITS    SourceOfFunds = "GOVERNMENT_BENEFITS"
+	SourceOfFundsCRYPTO_DISPOSALS       SourceOfFunds = "CRYPTO_DISPOSALS"
+	SourceOfFundsGAMBLING_WINNINGS      SourceOfFunds = "GAMBLING_WINNINGS"
+	SourceOfFundsOTHER                  SourceOfFunds = "OTHER"
+)
+
+// Direction represents the sEND = outbound; RECEIVE = inbound; BOTH = inbound and outbound.
+type Direction string
+
+const (
+	DirectionSEND    Direction = "SEND"
+	DirectionRECEIVE Direction = "RECEIVE"
+	DirectionBOTH    Direction = "BOTH"
+)
 
 // IndividualResponseDto is generated from components.schemas.IndividualResponseDto.
 type IndividualResponseDto struct {
-	Compliance              *IndividualComplianceResponseDto `json:"compliance"`
-	CreatedAt               time.Time                        `json:"createdAt"`
-	DateOfBirth             *string                          `json:"dateOfBirth"`
-	DocumentCountryCode     *string                          `json:"documentCountryCode"`
-	DocumentExpiry          *string                          `json:"documentExpiry"`
-	DocumentNumber          *string                          `json:"documentNumber"`
-	DocumentType            *string                          `json:"documentType"`
-	Email                   *string                          `json:"email"`
-	FirstName               *string                          `json:"firstName"`
-	Id                      string                           `json:"id"`
-	IsSoleTrader            bool                             `json:"isSoleTrader"`
-	KycVerificationLink     string                           `json:"kycVerificationLink"`
-	LastName                *string                          `json:"lastName"`
-	LivenessLink            string                           `json:"livenessLink"`
-	MiddleName              *string                          `json:"middleName"`
-	Nationalities           []string                         `json:"nationalities"`
-	Phone                   *string                          `json:"phone"`
-	PhysicalAddress         *PhysicalAddressResponseDto      `json:"physicalAddress"`
-	PlaceOfBirthCity        *string                          `json:"placeOfBirthCity"`
-	PlaceOfBirthCountryCode *string                          `json:"placeOfBirthCountryCode"`
-	ResidenceCountryCode    *string                          `json:"residenceCountryCode"`
-	TaxResidences           []TaxResidence                   `json:"taxResidences"`
-	UpdatedAt               time.Time                        `json:"updatedAt"`
+	Compliance              *Compliance          `json:"compliance"`
+	CreatedAt               openapi.DateTime     `json:"createdAt"`
+	DateOfBirth             *openapi.Date        `json:"dateOfBirth"`
+	DocumentCountryCode     *string              `json:"documentCountryCode"`
+	DocumentExpiry          *openapi.Date        `json:"documentExpiry"`
+	DocumentNumber          *string              `json:"documentNumber"`
+	DocumentType            *DocumentType        `json:"documentType"`
+	Email                   *string              `json:"email"`
+	FirstName               *string              `json:"firstName"`
+	Id                      string               `json:"id"`
+	IsSoleTrader            bool                 `json:"isSoleTrader"`
+	KycVerificationLink     string               `json:"kycVerificationLink"`
+	LastName                *string              `json:"lastName"`
+	LivenessLink            string               `json:"livenessLink"`
+	MiddleName              *string              `json:"middleName"`
+	Nationalities           []string             `json:"nationalities"`
+	Phone                   *string              `json:"phone"`
+	PhysicalAddress         *PhysicalAddress     `json:"physicalAddress,omitempty"`
+	PlaceOfBirthCity        *string              `json:"placeOfBirthCity"`
+	PlaceOfBirthCountryCode *string              `json:"placeOfBirthCountryCode"`
+	ResidenceCountryCode    *string              `json:"residenceCountryCode"`
+	TaxResidences           []TaxResidencesEntry `json:"taxResidences"`
+	UpdatedAt               openapi.DateTime     `json:"updatedAt"`
 }
 
-type TaxResidence struct {
+type Compliance struct {
+	AnnualRevenue         AnnualRevenue          `json:"annualRevenue,omitempty"`
+	EstimatedWealth       EstimatedWealth        `json:"estimatedWealth,omitempty"`
+	ExpectedYearlyTxCount ExpectedYearlyTxCount  `json:"expectedYearlyTxCount,omitempty"`
+	ExpectedYearlyVolume  ExpectedYearlyVolume   `json:"expectedYearlyVolume,omitempty"`
+	GeographicScope       []GeographicScopeEntry `json:"geographicScope,omitempty"`
+	ProductsSubscribed    []ProductsSubscribed   `json:"productsSubscribed,omitempty"`
+	Profession            Profession             `json:"profession,omitempty"`
+	ProfessionCategory    ProfessionCategory     `json:"professionCategory,omitempty"`
+	ProfessionOther       string                 `json:"professionOther,omitempty"`
+	Purpose               Purpose                `json:"purpose,omitempty"`
+	PurposeDetails        string                 `json:"purposeDetails,omitempty"`
+	SourceOfFunds         SourceOfFunds          `json:"sourceOfFunds,omitempty"`
+	SourceOfFundsDetails  string                 `json:"sourceOfFundsDetails,omitempty"`
+}
+
+type PhysicalAddress struct {
+	AddressLine1 string `json:"addressLine1"`
+	AddressLine2 string `json:"addressLine2,omitempty"`
+	City         string `json:"city"`
+	CountryCode  string `json:"countryCode"`
+	ZipCode      string `json:"zipCode"`
+}
+
+type TaxResidencesEntry struct {
 	CountryCode string `json:"countryCode"`
 	Tin         string `json:"tin"`
+}
+
+type GeographicScopeEntry struct {
+	CountryCode string    `json:"countryCode"`
+	Direction   Direction `json:"direction"`
 }

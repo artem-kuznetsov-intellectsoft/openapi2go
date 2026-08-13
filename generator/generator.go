@@ -40,10 +40,19 @@ type generator struct {
 
 	enums             []*enumDef
 	structs           []*structDef
+	pendingInline     []*pendingInlineStruct
 	usesDateTime      bool
 	usesDate          bool
 	usesOneOf         bool
 	usesDiscriminated bool
+}
+
+// pendingInlineStruct is a named struct generated from an anonymous array
+// item schema, queued so it renders after the struct that references it
+// rather than before (the ordering used for $ref-resolved struct fields).
+type pendingInlineStruct struct {
+	name   string
+	schema *openapi.Schema
 }
 
 // Generate renders Go source declaring one struct per schema under
@@ -99,6 +108,7 @@ func (g *generator) resolveNamedType(name string) string {
 			comment: fmt.Sprintf("%s is generated from components.schemas.%s.", name, name),
 			alias:   alias,
 		})
+		g.flushPendingInline()
 
 		return name
 	}
@@ -109,8 +119,19 @@ func (g *generator) resolveNamedType(name string) string {
 		comment: fmt.Sprintf("%s is generated from components.schemas.%s.", name, name),
 		fields:  fields,
 	})
+	g.flushPendingInline()
 
 	return name
+}
+
+// flushPendingInline renders every struct queued by resolveInlineObjectType,
+// in discovery order, after the struct that referenced them.
+func (g *generator) flushPendingInline() {
+	for len(g.pendingInline) > 0 {
+		p := g.pendingInline[0]
+		g.pendingInline = g.pendingInline[1:]
+		g.structs = append(g.structs, &structDef{name: p.name, fields: g.buildFields(p.schema)})
+	}
 }
 
 // discriminatedAlias reports whether schema is a pure discriminated union —
@@ -224,11 +245,15 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 			return "map[string]" + valType, nullable
 		}
 
+		if len(schema.Properties) > 0 {
+			return g.resolveInlineObjectType(toPascalCase(propName), schema), nullable
+		}
+
 		return "map[string]any", nullable
 	case "array":
 		itemType := "any"
 		if schema.Items != nil {
-			itemType, _ = g.resolveRefOrType(propName, schema.Items)
+			itemType = g.resolveArrayItemType(propName, schema.Items)
 		}
 
 		return "[]" + itemType, nullable
@@ -274,6 +299,40 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 	default:
 		return "any", nullable
 	}
+}
+
+// resolveArrayItemType resolves the Go type for an array's items schema. A
+// $ref (or allOf-wrapped nullable $ref) resolves to the referenced named
+// type; an inline object schema with its own properties gets a named
+// "<ArrayTypeName>Entry" struct generated on demand (see
+// resolveInlineObjectType); anything else falls back to resolveSchemaType.
+func (g *generator) resolveArrayItemType(propName string, items *openapi.RefOr[*openapi.Schema]) string {
+	if refName, _, ok := unwrapRef(items); ok {
+		return g.resolveNamedType(refName)
+	}
+
+	if items.Value != nil && items.Value.Type == "object" && len(items.Value.Properties) > 0 {
+		return g.resolveInlineObjectType(toPascalCase(propName)+"Entry", items.Value)
+	}
+
+	typ, _ := g.resolveSchemaType(propName, items.Value)
+
+	return typ
+}
+
+// resolveInlineObjectType generates (memoized) a named struct for an
+// anonymous object schema appearing as a property value or an array's items.
+// Rendering is deferred until the struct that references it has been
+// emitted (see flushPendingInline).
+func (g *generator) resolveInlineObjectType(name string, schema *openapi.Schema) string {
+	if g.generated[name] {
+		return name
+	}
+	g.generated[name] = true
+
+	g.pendingInline = append(g.pendingInline, &pendingInlineStruct{name: name, schema: schema})
+
+	return name
 }
 
 func (g *generator) registerEnum(name string, schema *openapi.Schema) {
