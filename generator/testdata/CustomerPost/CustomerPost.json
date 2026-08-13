@@ -1,0 +1,319 @@
+{
+    "paths": {
+        "/customer": {
+            "post": {
+                "description": "Add a legal-entity customer for completion through a prefilled KYB wizard. The customer remains pending and sanctions screening starts only after successful BiometrID verification.",
+                "operationId": "CustomerController_createCustomer",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "description": "Customer data",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "externalId": {
+                                        "type": "string",
+                                        "description": "Optional external ID assigned by Superclient",
+                                        "example": "CUST-12345",
+                                        "maxLength": 255
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Customer name",
+                                        "example": "Dupont & Fils SAS"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Customer added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/CustomerDetailCompanyResponseDto"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "vibans": {
+                                                    "type": "array",
+                                                    "description": "Virtual IBANs assigned to the customer; empty until one has been provisioned.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": [
+                                                            "id",
+                                                            "type",
+                                                            "masterAccount",
+                                                            "iban",
+                                                            "customerId",
+                                                            "isActive",
+                                                            "bcOrderId",
+                                                            "alias",
+                                                            "createdAt",
+                                                            "updatedAt",
+                                                            "deletedAt"
+                                                        ],
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "format": "uuid",
+                                                                "description": "Virtual IBAN record identifier."
+                                                            },
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "COBO",
+                                                                    "POBO"
+                                                                ],
+                                                                "description": "Usage model: COBO = collect on behalf of; POBO = payment on behalf of."
+                                                            },
+                                                            "masterAccount": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "CDA",
+                                                                    "FDA"
+                                                                ],
+                                                                "description": "Master account to which the virtual IBAN is linked."
+                                                            },
+                                                            "iban": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "description": "Provisioned virtual IBAN; null while provisioning is incomplete."
+                                                            },
+                                                            "customerId": {
+                                                                "type": "string",
+                                                                "format": "uuid",
+                                                                "description": "Customer that owns the virtual IBAN."
+                                                            },
+                                                            "isActive": {
+                                                                "type": "boolean",
+                                                                "description": "Whether the virtual IBAN is active for transactions."
+                                                            },
+                                                            "bcOrderId": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "description": "Banking Circle provisioning order identifier."
+                                                            },
+                                                            "alias": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "description": "Optional display alias for the virtual IBAN."
+                                                            },
+                                                            "createdAt": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "description": "Virtual IBAN record creation timestamp."
+                                                            },
+                                                            "updatedAt": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "description": "Virtual IBAN record update timestamp."
+                                                            },
+                                                            "deletedAt": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "nullable": true,
+                                                                "description": "Soft-deletion timestamp; null for a retained record."
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "company": {
+                                                    "allOf": [
+                                                        {
+                                                            "$ref": "#/components/schemas/CompanyDetailResponseDto"
+                                                        },
+                                                        {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "compliance": {
+                                                                    "type": "object",
+                                                                    "nullable": true,
+                                                                    "description": "Canonical structured compliance values stored for the company.",
+                                                                    "properties": {
+                                                                        "sourceOfFunds": {
+                                                                            "type": "string",
+                                                                            "enum": [
+                                                                                "BUSINESS_TRADING_REVENUE",
+                                                                                "SHAREHOLDER_CAPITAL_EQUITY_CONTRIBUTION",
+                                                                                "INTRA_GROUP_FINANCING_PARENT_FUNDING",
+                                                                                "BANK_LOAN_CREDIT_FACILITY",
+                                                                                "INVESTOR_FUNDRAISING_PROCEEDS",
+                                                                                "SALE_OF_ASSETS_BUSINESS",
+                                                                                "CRYPTO_ASSET_ACTIVITY_PROCEEDS",
+                                                                                "THIRD_PARTY_CLIENT_FUNDS",
+                                                                                "OTHER"
+                                                                            ],
+                                                                            "description": "Source of funds. Allowed values: BUSINESS_TRADING_REVENUE = Business / trading revenue; SHAREHOLDER_CAPITAL_EQUITY_CONTRIBUTION = Shareholder capital / equity contribution; INTRA_GROUP_FINANCING_PARENT_FUNDING = Intra-group financing / parent funding; BANK_LOAN_CREDIT_FACILITY = Bank loan / credit facility; INVESTOR_FUNDRAISING_PROCEEDS = Investor / fundraising proceeds (VC, PE); SALE_OF_ASSETS_BUSINESS = Sale of assets / business; CRYPTO_ASSET_ACTIVITY_PROCEEDS = Proceeds from crypto-asset activity; THIRD_PARTY_CLIENT_FUNDS = Third-party / client funds (not own funds); OTHER = Other (not listed)."
+                                                                        },
+                                                                        "sourceOfFundsDetails": {
+                                                                            "type": "string",
+                                                                            "description": "Original narrative when sourceOfFunds is OTHER.",
+                                                                            "maxLength": 1024
+                                                                        },
+                                                                        "purpose": {
+                                                                            "type": "string",
+                                                                            "enum": [
+                                                                                "OPERATIONAL_ACCOUNT",
+                                                                                "SALARY",
+                                                                                "INVESTMENT",
+                                                                                "TREASURY_MANAGEMENT",
+                                                                                "ON_OFF_RAMP",
+                                                                                "INTERNATIONAL_PAYMENTS",
+                                                                                "OTHER"
+                                                                            ],
+                                                                            "description": "Purpose of the relationship. Allowed values: OPERATIONAL_ACCOUNT = Operational account; SALARY = Salary; INVESTMENT = Investment; TREASURY_MANAGEMENT = Treasury management; ON_OFF_RAMP = On/Off-ramp (fiat <-> crypto); INTERNATIONAL_PAYMENTS = International payments / remittance; OTHER = Other (not listed - please specify)."
+                                                                        },
+                                                                        "purposeDetails": {
+                                                                            "type": "string",
+                                                                            "description": "Original narrative when purpose is OTHER.",
+                                                                            "maxLength": 1024
+                                                                        },
+                                                                        "expectedYearlyTxCount": {
+                                                                            "type": "string",
+                                                                            "enum": [
+                                                                                "LT_50",
+                                                                                "B_50_500",
+                                                                                "B_500_5000",
+                                                                                "B_5000_50000",
+                                                                                "GT_50000"
+                                                                            ],
+                                                                            "description": "Expected yearly transaction count. Allowed values: LT_50 = < 50 transactions / year; B_50_500 = 50 - 500 transactions / year; B_500_5000 = 500 - 5,000 transactions / year; B_5000_50000 = 5,000 - 50,000 transactions / year; GT_50000 = > 50,000 transactions / year.",
+                                                                            "example": "B_50_500"
+                                                                        },
+                                                                        "geographicScope": {
+                                                                            "type": "array",
+                                                                            "description": "Countries accounting for more than 20% of expected flows and their direction.",
+                                                                            "items": {
+                                                                                "type": "object",
+                                                                                "required": [
+                                                                                    "countryCode",
+                                                                                    "direction"
+                                                                                ],
+                                                                                "properties": {
+                                                                                    "countryCode": {
+                                                                                        "type": "string",
+                                                                                        "minLength": 2,
+                                                                                        "maxLength": 2,
+                                                                                        "example": "FR"
+                                                                                    },
+                                                                                    "direction": {
+                                                                                        "type": "string",
+                                                                                        "enum": [
+                                                                                            "SEND",
+                                                                                            "RECEIVE",
+                                                                                            "BOTH"
+                                                                                        ],
+                                                                                        "description": "SEND = outbound; RECEIVE = inbound; BOTH = inbound and outbound.",
+                                                                                        "example": "BOTH"
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        "productsSubscribed": {
+                                                                            "type": "array",
+                                                                            "description": "Products selected by the customer.",
+                                                                            "items": {
+                                                                                "type": "string",
+                                                                                "enum": [
+                                                                                    "DIRECT_MINT_BURN",
+                                                                                    "EUR_ACCOUNT",
+                                                                                    "FX_SWAP"
+                                                                                ]
+                                                                            },
+                                                                            "example": [
+                                                                                "EUR_ACCOUNT"
+                                                                            ]
+                                                                        },
+                                                                        "financialAssets": {
+                                                                            "type": "string",
+                                                                            "enum": [
+                                                                                "LT_100K",
+                                                                                "B_100K_1M",
+                                                                                "B_1M_10M",
+                                                                                "B_10M_100M",
+                                                                                "GT_100M",
+                                                                                "OTHER"
+                                                                            ],
+                                                                            "description": "Total financial assets. Allowed values: LT_100K = < €100,000; B_100K_1M = €100,000 - €1,000,000; B_1M_10M = €1,000,000 - €10,000,000; B_10M_100M = €10,000,000 - €100,000,000; GT_100M = > €100,000,000; OTHER = Other."
+                                                                        },
+                                                                        "financialAssetsOther": {
+                                                                            "type": "string",
+                                                                            "description": "Original narrative when financialAssets is OTHER.",
+                                                                            "maxLength": 255
+                                                                        },
+                                                                        "turnoverBracket": {
+                                                                            "type": "string",
+                                                                            "enum": [
+                                                                                "LT_100K",
+                                                                                "B_100K_1M",
+                                                                                "B_1M_10M",
+                                                                                "B_10M_50M",
+                                                                                "B_50M_250M",
+                                                                                "GT_250M",
+                                                                                "OTHER"
+                                                                            ],
+                                                                            "description": "Annual turnover. Allowed values: LT_100K = < €100,000; B_100K_1M = €100,000 - €1,000,000; B_1M_10M = €1,000,000 - €10,000,000; B_10M_50M = €10,000,000 - €50,000,000; B_50M_250M = €50,000,000 - €250,000,000; GT_250M = > €250,000,000; OTHER = Other."
+                                                                        },
+                                                                        "turnoverBracketOther": {
+                                                                            "type": "string",
+                                                                            "description": "Original narrative when turnoverBracket is OTHER.",
+                                                                            "maxLength": 255
+                                                                        },
+                                                                        "expectedYearlyVolume": {
+                                                                            "type": "string",
+                                                                            "enum": [
+                                                                                "LT_100K",
+                                                                                "B_100K_1M",
+                                                                                "B_1M_10M",
+                                                                                "B_10M_50M",
+                                                                                "B_50M_250M",
+                                                                                "GT_250M"
+                                                                            ],
+                                                                            "description": "Expected yearly transaction volume. Allowed values: LT_100K = < €100,000; B_100K_1M = €100,000 - €1,000,000; B_1M_10M = €1,000,000 - €10,000,000; B_10M_50M = €10,000,000 - €50,000,000; B_50M_250M = €50,000,000 - €250,000,000; GT_250M = > €250,000,000."
+                                                                        },
+                                                                        "website": {
+                                                                            "type": "string",
+                                                                            "format": "uri",
+                                                                            "example": "https://dupont-fils.fr"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input data"
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing API key"
+                    }
+                },
+                "security": [
+                    {
+                        "api-key-config": []
+                    }
+                ],
+                "summary": "Add new Customer - legal entity type (B2B)",
+                "tags": [
+                    "Customer"
+                ]
+            }
+        }
+    }
+}

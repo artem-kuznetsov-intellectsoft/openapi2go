@@ -501,6 +501,16 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 		return fmt.Sprintf("OneOf[%s, %s]", typA, typB), nullable
 	}
 
+	// A schema whose only shape comes from a multi-member allOf (composition,
+	// as opposed to the single-member allOf-wrapped-$ref nullable idiom
+	// unwrapRef already handles) needs the same embed/merge treatment as a
+	// named components.schemas entry — buildFields implements that. This
+	// covers an inline object appearing this way as a property value, an
+	// array item, or an operation's requestBody/response schema.
+	if len(schema.AllOf) > 0 {
+		return g.resolveInlineObjectType(toPascalCase(propName), schema), nullable
+	}
+
 	switch schema.Type {
 	case "object":
 		if ref, ok := schema.AdditionalProperties.(*openapi.RefOr[*openapi.Schema]); ok && ref != nil {
