@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/generator"
@@ -12,6 +13,8 @@ import (
 )
 
 const usage = "usage: openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]\n       openapi2go version"
+
+const generatedFileMode = 0o644
 
 func main() {
 	if len(os.Args) < 2 {
@@ -105,7 +108,7 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 
-	code, err := generator.Generate(&spec, *pkg)
+	code, supportFiles, err := generator.Generate(&spec, *pkg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to generate Go code:", err)
 		os.Exit(1)
@@ -113,11 +116,27 @@ func runGenerate(args []string) {
 
 	if *output == "" {
 		fmt.Print(code)
+
+		if len(supportFiles) > 0 {
+			fmt.Fprintln(os.Stderr, "note: generated code needs the support types below; pass -o to also write them as files:")
+			for name := range supportFiles {
+				fmt.Fprintln(os.Stderr, " -", name)
+			}
+		}
+
 		return
 	}
 
-	if err := os.WriteFile(*output, []byte(code), 0o644); err != nil {
+	if err := os.WriteFile(*output, []byte(code), generatedFileMode); err != nil {
 		fmt.Fprintln(os.Stderr, "failed to write output file:", err)
 		os.Exit(1)
+	}
+
+	dir := filepath.Dir(*output)
+	for name, content := range supportFiles {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), generatedFileMode); err != nil {
+			fmt.Fprintln(os.Stderr, "failed to write support file:", err)
+			os.Exit(1)
+		}
 	}
 }

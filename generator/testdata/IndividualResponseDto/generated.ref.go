@@ -1,7 +1,5 @@
 package generated
 
-import "github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
-
 // DocumentType represents the identity document type. NOT_PROVIDED is a legacy response value and cannot be submitted for new records.
 type DocumentType string
 
@@ -234,10 +232,10 @@ const (
 // IndividualResponseDto is generated from components.schemas.IndividualResponseDto.
 type IndividualResponseDto struct {
 	Compliance              *Compliance          `json:"compliance"`
-	CreatedAt               openapi.DateTime     `json:"createdAt"`
-	DateOfBirth             *openapi.Date        `json:"dateOfBirth"`
+	CreatedAt               DateTime             `json:"createdAt"`
+	DateOfBirth             *Date                `json:"dateOfBirth"`
 	DocumentCountryCode     *string              `json:"documentCountryCode"`
-	DocumentExpiry          *openapi.Date        `json:"documentExpiry"`
+	DocumentExpiry          *Date                `json:"documentExpiry"`
 	DocumentNumber          *string              `json:"documentNumber"`
 	DocumentType            *DocumentType        `json:"documentType"`
 	Email                   *string              `json:"email"`
@@ -255,7 +253,7 @@ type IndividualResponseDto struct {
 	PlaceOfBirthCountryCode *string              `json:"placeOfBirthCountryCode"`
 	ResidenceCountryCode    *string              `json:"residenceCountryCode"`
 	TaxResidences           []TaxResidencesEntry `json:"taxResidences"`
-	UpdatedAt               openapi.DateTime     `json:"updatedAt"`
+	UpdatedAt               DateTime             `json:"updatedAt"`
 }
 
 type Compliance struct {

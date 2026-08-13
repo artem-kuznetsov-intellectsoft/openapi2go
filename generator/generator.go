@@ -56,8 +56,14 @@ type pendingInlineStruct struct {
 }
 
 // Generate renders Go source declaring one struct per schema under
-// components.schemas of spec, plus any enum types referenced by them.
-func Generate(spec *openapi.OpenAPI, pkgName string) (string, error) {
+// components.schemas of spec, plus any enum types referenced by them, as
+// code. It also returns supportFiles: any of openapi.SupportFiles that code
+// depends on (e.g. "date.go", when a date/date-time field was generated),
+// keyed by filename with their package clause rewritten to pkgName. Callers
+// write these alongside code's own output file so the generated package
+// defines DateTime, Date, OneOf, and Discriminated itself rather than
+// importing this module's openapi package.
+func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string, error) {
 	g := &generator{
 		schemas:   map[string]*openapi.Schema{},
 		generated: map[string]bool{},
@@ -80,10 +86,40 @@ func Generate(spec *openapi.OpenAPI, pkgName string) (string, error) {
 
 	formatted, err := format.Source([]byte(src))
 	if err != nil {
-		return src, fmt.Errorf("formatting generated code: %w", err)
+		return src, nil, fmt.Errorf("formatting generated code: %w", err)
 	}
 
-	return string(formatted), nil
+	return string(formatted), g.supportFiles(pkgName), nil
+}
+
+// supportFiles returns the subset of openapi.SupportFiles that the schemas
+// walked by g required, with each file's package clause rewritten from
+// "package openapi" to pkgName so it compiles alongside the generated code
+// without depending on this module.
+func (g *generator) supportFiles(pkgName string) map[string]string {
+	var names []string
+	if g.usesDate || g.usesDateTime {
+		names = append(names, "date.go")
+	}
+	if g.usesOneOf {
+		names = append(names, "oneof.go")
+	}
+	if g.usesDiscriminated {
+		names = append(names, "discriminated.go")
+	}
+
+	if len(names) == 0 {
+		return nil
+	}
+
+	source := openapi.SupportFiles()
+
+	files := make(map[string]string, len(names))
+	for _, name := range names {
+		files[name] = strings.Replace(source[name], "package openapi\n", "package "+pkgName+"\n", 1)
+	}
+
+	return files
 }
 
 // resolveNamedType returns the Go type name for a components.schemas entry,
@@ -147,7 +183,7 @@ func (g *generator) discriminatedAlias(name string, schema *openapi.Schema) (str
 	typB, _ := g.resolveRefOrType(name, schema.OneOf[1])
 	g.usesDiscriminated = true
 
-	return fmt.Sprintf("openapi.Discriminated[%s, %s]", typA, typB), true
+	return fmt.Sprintf("Discriminated[%s, %s]", typA, typB), true
 }
 
 // fieldCollector accumulates the pieces buildFields needs while walking a
@@ -234,7 +270,7 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 		typB, _ := g.resolveRefOrType(propName, schema.OneOf[1])
 		g.usesOneOf = true
 
-		return fmt.Sprintf("openapi.OneOf[%s, %s]", typA, typB), nullable
+		return fmt.Sprintf("OneOf[%s, %s]", typA, typB), nullable
 	}
 
 	switch schema.Type {
@@ -268,13 +304,13 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 		if schema.Format == "date-time" {
 			g.usesDateTime = true
 
-			return "openapi.DateTime", nullable
+			return "DateTime", nullable
 		}
 
 		if schema.Format == "date" {
 			g.usesDate = true
 
-			return "openapi.Date", nullable
+			return "Date", nullable
 		}
 
 		if schema.Format == "byte" {
@@ -354,23 +390,6 @@ func (g *generator) render(pkgName string) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "package %s\n\n", pkgName)
-
-	var imports []string
-	if g.usesOneOf || g.usesDiscriminated || g.usesDate || g.usesDateTime {
-		imports = append(imports, `"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"`)
-	}
-
-	switch len(imports) {
-	case 0:
-	case 1:
-		fmt.Fprintf(&b, "import %s\n\n", imports[0])
-	default:
-		b.WriteString("import (\n")
-		for _, imp := range imports {
-			fmt.Fprintf(&b, "%s\n", imp)
-		}
-		b.WriteString(")\n\n")
-	}
 
 	for _, e := range g.enums {
 		if sentence := describeSentence(e.description); sentence != "" {

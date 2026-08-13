@@ -1,7 +1,5 @@
 package generated
 
-import "github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
-
 // Bicycle is generated from components.schemas.Bicycle.
 type Bicycle struct {
 	FrameSize   string `json:"frame_size,omitempty"`
@@ -17,7 +15,7 @@ type Car struct {
 }
 
 // Vehicle is generated from components.schemas.Vehicle.
-type Vehicle = openapi.Discriminated[Car, Bicycle]
+type Vehicle = Discriminated[Car, Bicycle]
 
 // VehicleUnion is generated from components.schemas.VehicleUnion.
 type VehicleUnion struct {

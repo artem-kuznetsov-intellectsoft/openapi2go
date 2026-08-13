@@ -3,6 +3,7 @@ package generator
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
@@ -121,15 +122,24 @@ func TestGenerate(t *testing.T) {
 				t.Fatalf("unmarshaling input fixture: %v", err)
 			}
 
-			got, err := Generate(&spec, "generated")
+			got, supportFiles, err := Generate(&spec, "generated")
 			if err != nil {
 				t.Fatalf("Generate: %v", err)
 			}
+
+			dir := filepath.Dir(tt.refFile)
 
 			if update {
 				if err := os.WriteFile(tt.refFile, []byte(got), 0o644); err != nil {
 					t.Fatalf("updating golden file %s: %v", tt.refFile, err)
 				}
+
+				for name, content := range supportFiles {
+					if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+						t.Fatalf("updating golden support file %s: %v", name, err)
+					}
+				}
+
 				return
 			}
 
@@ -140,6 +150,17 @@ func TestGenerate(t *testing.T) {
 
 			if diff := cmp.Diff(string(want), got); diff != "" {
 				t.Errorf("generated output does not match %s (-want +got):\n%s", tt.refFile, diff)
+			}
+
+			for name, content := range supportFiles {
+				wantSupport, err := os.ReadFile(filepath.Join(dir, name))
+				if err != nil {
+					t.Fatalf("reading expected support file %s: %v", name, err)
+				}
+
+				if diff := cmp.Diff(string(wantSupport), content); diff != "" {
+					t.Errorf("generated support file %s does not match (-want +got):\n%s", name, diff)
+				}
 			}
 		})
 	}

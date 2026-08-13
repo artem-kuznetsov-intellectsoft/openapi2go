@@ -57,9 +57,13 @@ whenever generating or reviewing generator behavior, not just as background read
   - `enumIndex` deduplicates enum type/const declarations by the resolved type name (see
     type-mapping.md for how that name is derived) so a repeated enum shape emits once.
   - `usesDateTime`/`usesDate`/`usesOneOf`/`usesDiscriminated` are generator-wide flags — set
-    whenever a field mapping requires it — that gate emitting a single conditional import of
-    this module's own `openapi` package (see type-mapping.md for which formats/keywords trigger
-    each flag).
+    whenever a field mapping requires it — that `Generate` uses to pick which of
+    `openapi.SupportFiles()` (`date.go`, `oneof.go`, `discriminated.go`, embedded verbatim from
+    this package via `openapi/support.go`) to return alongside the generated code, package
+    clause rewritten to the output package name, so `DateTime`/`Date`/`OneOf`/`Discriminated`
+    live in the output package instead of being imported from this module (see type-mapping.md
+    for which formats/keywords trigger each flag). `cmd/openapi2go` writes these files next to
+    `-o`'s output file; in stdout mode (no `-o`) it just lists their names on stderr.
 - **`cmd/openapi2go`** — the CLI entrypoint (`generate` subcommand). Note `reorderFlagsFirst`:
   it hoists `-o`/`-pkg` in front of the positional spec path before calling `flag.Parse`, since
   Go's `flag` package stops parsing at the first non-flag argument.

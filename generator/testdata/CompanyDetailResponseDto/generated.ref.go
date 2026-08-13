@@ -1,7 +1,5 @@
 package generated
 
-import "github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
-
 type Capacity string
 
 const (
@@ -103,7 +101,7 @@ type CompanyDetailResponseDto struct {
 	BrandName               map[string]any                 `json:"brandName"`
 	Capacity                *Capacity                      `json:"capacity"`
 	Compliance              *CompanyComplianceResponseDto  `json:"compliance"`
-	CreatedAt               openapi.DateTime               `json:"createdAt"`
+	CreatedAt               DateTime                       `json:"createdAt"`
 	CrsClassification       *CrsClassification             `json:"crsClassification"`
 	Documents               []DocumentResponseDto          `json:"documents"`
 	Email                   map[string]any                 `json:"email"`
@@ -128,6 +126,6 @@ type CompanyDetailResponseDto struct {
 	TcAcceptances           []TcAcceptanceResponseDto      `json:"tcAcceptances"`
 	Tin                     map[string]any                 `json:"tin"`
 	Ubos                    []CompanyUboResponseDto        `json:"ubos"`
-	UpdatedAt               openapi.DateTime               `json:"updatedAt"`
+	UpdatedAt               DateTime                       `json:"updatedAt"`
 	Website                 map[string]any                 `json:"website"`
 }
