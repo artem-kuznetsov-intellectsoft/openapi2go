@@ -96,12 +96,12 @@ type-mapping.md's rules already produced for the main generated file.
 ## Testing pattern
 
 Generator tests (`generator/generator_test.go`) are golden-file tests: each case reads
-an input fixture OpenAPI document from `testdata/<Case>/`, runs `Generate`, and diffs
+an input fixture OpenAPI document from `fixtures/<Case>/`, runs `Generate`, and diffs
 (`go-cmp`) the result against a `generated.ref.go` file in the same directory. When adding a new
-generator behavior, add a new `testdata/<Case>/` fixture pair rather than asserting inline —
-that's the existing convention. Nearly every `testdata/` fixture is wired into `_test.go`
+generator behavior, add a new `fixtures/<Case>/` fixture pair rather than asserting inline —
+that's the existing convention. Nearly every `fixtures/` fixture is wired into `_test.go`
 (arrays, maps, polymorphism, oneOf/allOf composition, nullable fields, required vs optional,
-formats, etc.); `testdata/GenericSchema/` is the one exception left unwired — a monolithic spec
+formats, etc.); `fixtures/GenericSchema/` is the one exception left unwired — a monolithic spec
 covering the same primitive/format/required scenarios plus `readOnly`/`writeOnly` (unmapped
 keywords — see type-mapping.md). Check before assuming a scenario is covered.
 
