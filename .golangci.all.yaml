@@ -1,0 +1,42 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - depguard
+    - exhaustruct
+    - godot
+    - godox
+    - gomodguard
+    - gosec
+    - lll
+    - nlreturn
+    - noinlineerr
+    - paralleltest
+    - tagliatelle
+    - testpackage
+    - varnamelen
+    - wrapcheck
+    - wsl
+  exclusions:
+    rules:
+      - linters:
+          - wsl_v5
+        text: "missing whitespace above this line"
+    paths:
+      - generator/fixtures/
+      - openapi/client_example.go
+  settings:
+    gosec:
+      excludes:
+        - G306
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+formatters:
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/artem-kuznetsov-intellectsoft/openapi2go
+    gofumpt:
+      extra-rules: true
