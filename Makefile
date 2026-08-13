@@ -1,4 +1,4 @@
-.PHONY: install test update-golden
+.PHONY: install test update-golden lint
 
 install:
 	go install ./cmd/openapi2go
@@ -8,3 +8,6 @@ test:
 
 update-golden:
 	UPDATE_GOLDEN=1 go test ./generator -run TestGenerate
+
+lint:
+	golangci-lint run ./...

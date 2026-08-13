@@ -31,9 +31,6 @@ linters:
         - name: package-comments
           disabled: true
 formatters:
-  enable:
-    - goimports
-    - gofumpt
   settings:
     goimports:
       local-prefixes:
