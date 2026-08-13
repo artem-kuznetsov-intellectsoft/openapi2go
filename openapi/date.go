@@ -35,3 +35,11 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// DateTime holds a complete date-time value, as used by the OpenAPI
+// string/date-time format. Its JSON encoding is RFC3339 (promoted from the
+// embedded time.Time), matching the wire format schema.Format "date-time"
+// describes.
+type DateTime struct {
+	time.Time
+}

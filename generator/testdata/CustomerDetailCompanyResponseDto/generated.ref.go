@@ -1,6 +1,6 @@
 package generated
 
-import "time"
+import "github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 
 // CustomerType represents the customer type.
 type CustomerType string
@@ -28,7 +28,7 @@ type CustomerDetailCompanyResponseDto struct {
 	Company                   CompanyDetailResponseDto `json:"company"`
 	CompanyRegistrationNumber map[string]any           `json:"companyRegistrationNumber"`
 	CompanyTaxId              map[string]any           `json:"companyTaxId"`
-	CreatedAt                 time.Time                `json:"createdAt"`
+	CreatedAt                 openapi.DateTime         `json:"createdAt"`
 	CustomerType              CustomerType             `json:"customerType"`
 	DefaultBankAddress        map[string]any           `json:"defaultBankAddress"`
 	DefaultChain              map[string]any           `json:"defaultChain"`
@@ -38,7 +38,7 @@ type CustomerDetailCompanyResponseDto struct {
 	LastScreenedAt            map[string]any           `json:"lastScreenedAt"`
 	Name                      string                   `json:"name"`
 	PhysicalAddress           map[string]any           `json:"physicalAddress"`
-	UpdatedAt                 time.Time                `json:"updatedAt"`
+	UpdatedAt                 openapi.DateTime         `json:"updatedAt"`
 	VerificationStatus        VerificationStatus       `json:"verificationStatus"`
 	Vibans                    []map[string]any         `json:"vibans"`
 }

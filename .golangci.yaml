@@ -23,7 +23,7 @@ linters:
         text: "package-comments: should have a package comment"
       - linters:
           - wsl_v5
-        text: "missing whitespace above this line "
+        text: "missing whitespace above this line"
 formatters:
   enable:
     - goimports

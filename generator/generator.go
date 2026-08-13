@@ -40,7 +40,7 @@ type generator struct {
 
 	enums             []*enumDef
 	structs           []*structDef
-	usesTime          bool
+	usesDateTime      bool
 	usesDate          bool
 	usesOneOf         bool
 	usesDiscriminated bool
@@ -241,9 +241,9 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 		}
 
 		if schema.Format == "date-time" {
-			g.usesTime = true
+			g.usesDateTime = true
 
-			return "time.Time", nullable
+			return "openapi.DateTime", nullable
 		}
 
 		if schema.Format == "date" {
@@ -297,10 +297,7 @@ func (g *generator) render(pkgName string) string {
 	fmt.Fprintf(&b, "package %s\n\n", pkgName)
 
 	var imports []string
-	if g.usesTime {
-		imports = append(imports, `"time"`)
-	}
-	if g.usesOneOf || g.usesDiscriminated || g.usesDate {
+	if g.usesOneOf || g.usesDiscriminated || g.usesDate || g.usesDateTime {
 		imports = append(imports, `"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"`)
 	}
 
