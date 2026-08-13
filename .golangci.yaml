@@ -1,12 +1,13 @@
 version: "2"
+
 linters:
-  default: all
+  default: all # Valid enum value [4]
+  
   disable:
     - depguard
     - exhaustruct
     - godot
     - godox
-    - gomodguard
     - gosec
     - lll
     - nlreturn
@@ -16,7 +17,10 @@ linters:
     - testpackage
     - varnamelen
     - wrapcheck
-    - wsl
+    - wsl            # Deprecated (replaced by wsl_v5)
+    - gomodguard     # Deprecated (replaced by gomodguard_v2)
+    - gomodguard_v2  
+
   exclusions:
     rules:
       - linters:
@@ -25,15 +29,18 @@ linters:
     paths:
       - generator/fixtures/
       - openapi/client_example.go
+
   settings:
     gosec:
       excludes:
         - G306
+        
     revive:
-      enable-default-rules: true
+      enable-default-rules: true  # CRITICAL: Prevents revive from disabling all other default rules
       rules:
         - name: package-comments
           disabled: true
+
 formatters:
   enable:
     - goimports
@@ -44,5 +51,6 @@ formatters:
         - github.com/artem-kuznetsov-intellectsoft/openapi2go
     gofumpt:
       extra-rules: true
+
 issues:
   new: true
