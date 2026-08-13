@@ -8,6 +8,7 @@ linters:
     - godox
     - gomodguard
     - gosec
+    - lll
     - nlreturn
     - noinlineerr
     - paralleltest
@@ -16,12 +17,14 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
-    - lll
   exclusions:
     rules:
       - linters:
           - wsl_v5
         text: "missing whitespace above this line"
+    paths:
+      - generator/fixtures/
+      - openapi/client_example.go
   settings:
     gosec:
       excludes:
