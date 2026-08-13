@@ -41,18 +41,25 @@ whenever generating or reviewing generator behavior, not just as background read
 - **`generator/generator.go`** — the actual OpenAPI→Go translation. A single
   unexported `generator` struct accumulates `structDef`/`enumDef` entries while walking schemas,
   then `render` emits source text that is passed through `go/format.Source` before being
-  returned. Key behaviors baked into this code (see also the "Type-mapping rules" section above):
-  - Struct fields are emitted in **alphabetical order of the JSON property name**, not spec
-    declaration order (`sortedKeys`).
+  returned. This is where the "Type-mapping rules" above are implemented; the notes below are
+  code-structure/implementation detail, not a restatement of what gets mapped to what:
+  - `sortedKeys` gives deterministic struct-field and top-level-schema iteration order (the
+    mapping rule this serves — alphabetical field order — is in type-mapping.md).
   - `$ref` resolution is recursive and memoized via `generator.generated`/`resolveNamedType` —
     each referenced schema is generated at most once, in the order first encountered.
-  - The OpenAPI 3.0 `allOf: [{ $ref: ... }]` idiom (used to attach `nullable` to a bare `$ref`)
-    is specifically unwrapped in `unwrapRef` — a single-entry `allOf` wrapping a `$ref` is
-    treated as that ref, nullable if the wrapper schema says so.
-  - Enum types are named after the *property*, not the schema (`toPascalCase(propName)`), and
-    deduplicated by name in `enumIndex` so the same enum used on multiple properties emits once.
-  - `usesTime` is a generator-wide flag: the `"time"` import is only emitted if some field
-    actually became `time.Time` (string + `format: date-time`).
+  - `unwrapRef` is the single place that recognizes both a direct `$ref` and the
+    `allOf`-wrapped-`$ref` nullable idiom (see type-mapping.md); it's called from both plain
+    property resolution and array-item resolution, so fixes there apply to both.
+  - `collectInlineProperties`/`buildFields` implement the `allOf` composition rules (embedding
+    vs. property-merge) from type-mapping.md.
+  - `discriminatedAlias` implements the two-member discriminated-`oneOf` → type-alias rule from
+    type-mapping.md, short-circuiting normal struct generation for schemas matching that shape.
+  - `enumIndex` deduplicates enum type/const declarations by the resolved type name (see
+    type-mapping.md for how that name is derived) so a repeated enum shape emits once.
+  - `usesDateTime`/`usesDate`/`usesOneOf`/`usesDiscriminated` are generator-wide flags — set
+    whenever a field mapping requires it — that gate emitting a single conditional import of
+    this module's own `openapi` package (see type-mapping.md for which formats/keywords trigger
+    each flag).
 - **`cmd/openapi2go`** — the CLI entrypoint (`generate` subcommand). Note `reorderFlagsFirst`:
   it hoists `-o`/`-pkg` in front of the positional spec path before calling `flag.Parse`, since
   Go's `flag` package stops parsing at the first non-flag argument.
@@ -66,10 +73,11 @@ Generator tests (`generator/generator_test.go`) are golden-file tests: each case
 an input fixture OpenAPI document from `testdata/<Case>/`, runs `Generate`, and diffs
 (`go-cmp`) the result against a `generated.ref.go` file in the same directory. When adding a new
 generator behavior, add a new `testdata/<Case>/` fixture pair rather than asserting inline —
-that's the existing convention. `testdata/` also contains scenario fixtures (arrays, maps,
-polymorphism, oneOf/allOf composition, nullable fields, read/write-only, required vs optional,
-generic schemas, etc.) that aren't all wired into `_test.go` yet — check before assuming a
-scenario is covered.
+that's the existing convention. Nearly every `testdata/` fixture is wired into `_test.go`
+(arrays, maps, polymorphism, oneOf/allOf composition, nullable fields, required vs optional,
+formats, etc.); `testdata/GenericSchema/` is the one exception left unwired — a monolithic spec
+covering the same primitive/format/required scenarios plus `readOnly`/`writeOnly` (unmapped
+keywords — see type-mapping.md). Check before assuming a scenario is covered.
 
 ## `api/openapi.json`
 

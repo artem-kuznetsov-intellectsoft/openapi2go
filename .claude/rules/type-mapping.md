@@ -12,17 +12,21 @@ When converting OpenAPI YAML/JSON schema definitions into Go data transfer objec
 
 #### **2. Type Mapping & Representation**
 * **Basic Strings**: Map default OpenAPI properties defined as `"type": "string"` (including special formats like `uuid`) to primitive Go `string` fields (e.g., `"id"` maps to `Id string`).
-* **Temporal Strings (Date-Time)**: Map date-time properties (such as `"createdAt"` which has `"format": "date-time"`) to Go's `time.Time` (e.g., `"createdAt"` maps to `CreatedAt time.Time`). Any file that generates such a field must import `"time"`.
+* **Temporal Strings (Date-Time and Date)**: Map date-time properties (such as `"createdAt"` which has `"format": "date-time"`) to this module's `openapi.DateTime` type, not the standard library's `time.Time` (e.g., `"createdAt"` maps to `CreatedAt openapi.DateTime`). Map date-only properties (`"format": "date"`) to `openapi.Date`. Both types embed `time.Time` internally but define their own RFC3339 `MarshalJSON`/`UnmarshalJSON`. Any file that generates such a field must import `"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"` — never `"time"` directly.
 * **Integers**: Map `"type": "integer"` to Go `int64` by default. If the property also declares `"format": "int32"`, map it to Go `int32` instead (e.g., `"seatingCapacity"` with `"format": "int32"` maps to `SeatingCapacity int32`).
 * **Required and Nullability**: `required` and `nullable` are independent axes. `nullable:true` means the field must be a pointer (e.g. `*string`) to natively support null values; `required:false` (or a missing `required` entry) only adds `,omitempty` to the JSON tag and does not by itself make the field a pointer. This pointer rule applies to scalar types (strings, numbers, booleans, enum types) and `$ref`-resolved or generated struct types only — it does not apply to `map[string]any`, slice, or `any` fields, since those are already nil-able.
+* **Nullable `$ref` (OpenAPI 3.0 `allOf` idiom)**: OpenAPI 3.0.x has no native way to mark a `$ref` itself `nullable`, so specs commonly wrap it in a single-entry `allOf` alongside the sibling keyword: `"allOf": [{"$ref": "#/components/schemas/Foo"}], "nullable": true`. Treat this the same as a direct `"$ref": "#/components/schemas/Foo"` — type the field with the resolved struct name — except apply the pointer rule above if the wrapper schema sets `nullable: true`. This idiom is unrelated to multi-member `allOf` composition (below), which is used for combining schemas rather than annotating one.
 * **Field Ordering**: Struct fields are emitted in alphabetical order of their JSON property name, not the declaration order from the source spec. This is because Go's `encoding/json` does not preserve object key order when unmarshaling into a map, so alphabetical order is used as the deterministic fallback.
 * **Inline Objects to Named Structs**: Properties defined as an inline `"type": "object"` (without a `$ref`) that declare their own `properties` generate a named struct, named after the PascalCase property (e.g., `"compliance"` maps to `Compliance *Compliance`, generating a `Compliance` struct from those properties). This generated struct is emitted after the struct whose field references it. If the object has no `properties` of its own (a free-form object), the property instead maps to a map with string keys and any values: `map[string]any` (e.g., `"externalId"` maps to `ExternalId map[string]any`).
 * **Arrays of Objects**: Properties defined as `"type": "array"` containing `"items": {"type": "object"}` map to a slice of a generated `<ArrayTypeName>Entry` struct (e.g., `"taxResidences"` with object items maps to `TaxResidences []TaxResidencesEntry`, generating a `TaxResidencesEntry` struct from those items' properties). This generated struct is emitted after the struct whose field references it. If the items schema has no `properties` of its own (a free-form object), the property instead maps to a slice of string-to-any maps: `[]map[string]any`.
 * **Component References (`$ref`)**: When a property references another component schema (e.g., `"company": {"$ref": "#/components/schemas/CompanyDetailResponseDto"}`), type the field directly with the resolved PascalCase struct name (e.g., `Company CompanyDetailResponseDto`).
+* **Composition (`allOf`)**: A bare `$ref` member of an `allOf` list becomes an embedded (anonymous) field of the referenced struct type — Go's idiom for composition. A non-`$ref` (inline) `allOf` member instead has its own `properties`/`required` merged directly into the enclosing schema's field set, as if declared there.
+* **Composition (`oneOf`)**: A schema with exactly two `oneOf` members maps to `openapi.OneOf[A, B]`, a generic union type that marshals/unmarshals whichever of the two is set. If the schema also has a `discriminator` and no `properties`/`allOf` of its own (a pure discriminated union of two `$ref`s), it instead generates as a type alias to `openapi.Discriminated[A, B]`, which resolves the concrete type by matching a field's value to its own Go type name.
 
 ---
 
 #### **3. Enforcing Enums with Custom Types**
+* **Type Naming**: The enum type is named after the *property*, not the schema it's declared on or referenced through — even if the enum is defined via a shared `$ref`, use the consuming property's own PascalCase name for the type. If the same property name is used with the same enum shape on more than one schema, only one type/const declaration is emitted (it is not duplicated per usage site).
 * **Type Declaration**: For any string field containing an `"enum"` definition (such as `"customerType"` with values `"INDIVIDUAL"`, `"COMPANY"`), do not use raw strings. Instead, define a dedicated custom type in Go:
 
   ```go
@@ -39,3 +43,8 @@ When converting OpenAPI YAML/JSON schema definitions into Go data transfer objec
   ```
 
 * **Field Integration**: Define the corresponding field in the parent struct using this custom enum type rather than a standard string (e.g., `CustomerType CustomerType`).
+
+---
+
+#### **4. Unmapped Keywords**
+* **`readOnly` / `writeOnly`**: Not currently mapped to anything — no pointer, field-visibility, or separate-request/response-type behavior is generated for these keywords. A field marked `readOnly` or `writeOnly` is emitted exactly as it would be without that keyword.
