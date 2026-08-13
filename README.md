@@ -1,0 +1,51 @@
+# openapi2go
+
+A Go code generator that converts OpenAPI 3.0.x component schemas into Go struct and
+enum declarations.
+
+`openapi/schema.go` is a hand-written struct model of the OpenAPI 3.0.x Object tree
+(unmarshaled via `encoding/json`). `generator` walks `components.schemas` in that model
+and emits formatted Go source. `cmd/openapi2go` wraps it in a small CLI.
+
+## Install
+
+```sh
+go install github.com/artem-kuznetsov-intellectsoft/openapi2go/cmd/openapi2go
+```
+
+## Usage
+
+```sh
+openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
+openapi2go version
+```
+
+- `-o` — output file path for the generated Go code (default: stdout)
+- `-pkg` — package name for the generated Go code (default: `generated`)
+
+Example:
+
+```sh
+openapi2go generate api/openapi.json -o generated/models.go -pkg generated
+```
+
+## Type-mapping rules
+
+The exact rules the generator follows when translating an OpenAPI schema into Go
+(field naming, nullability vs. `required`, enums, inline objects, arrays, `$ref`
+resolution, etc.) are documented in [`.claude/rules/type-mapping.md`](.claude/rules/type-mapping.md).
+
+## Development
+
+```sh
+go build ./...
+go vet ./...
+go test ./...
+golangci-lint run   # config: .golangci.yaml
+gofmt -l .          # formatting check
+```
+
+Generator tests are golden-file tests: each case in `generator/testdata/<Case>/` pairs
+an input OpenAPI fixture with an expected `generated.ref.go`. See
+[`.claude/CLAUDE.md`](.claude/CLAUDE.md) for architecture notes and repo-specific
+conventions.
