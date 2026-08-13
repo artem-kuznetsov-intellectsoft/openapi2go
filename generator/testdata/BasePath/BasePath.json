@@ -2,6 +2,7 @@
     "paths": {
         "/user": {
             "get": {
+                "operationId": "get-user",
                 "requestBody": {
                     "content": {
                         "application/json": {

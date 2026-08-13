@@ -110,14 +110,16 @@ func TestGenerate(t *testing.T) {
 			refFile:   "testdata/IndividualResponseDto/generated.ref.go",
 		},
 		{
-			name:      "BasePath",
-			inputFile: "testdata/BasePath/BasePath.json",
-			refFile:   "testdata/BasePath/generated.ref.go",
+			name:          "BasePath",
+			inputFile:     "testdata/BasePath/BasePath.json",
+			refFile:       "testdata/BasePath/generated.ref.go",
+			clientRefFile: "testdata/BasePath/client.ref.go",
 		},
 		{
-			name:      "PathParameters",
-			inputFile: "testdata/PathParameters/PathParameters.json",
-			refFile:   "testdata/PathParameters/generated.ref.go",
+			name:          "PathParameters",
+			inputFile:     "testdata/PathParameters/PathParameters.json",
+			refFile:       "testdata/PathParameters/generated.ref.go",
+			clientRefFile: "testdata/PathParameters/client.ref.go",
 		},
 		{
 			name:          "Customer",
@@ -126,9 +128,10 @@ func TestGenerate(t *testing.T) {
 			clientRefFile: "testdata/Customer/client.ref.go",
 		},
 		{
-			name:      "CustomerPost",
-			inputFile: "testdata/CustomerPost/CustomerPost.json",
-			refFile:   "testdata/CustomerPost/generated.ref.go",
+			name:          "CustomerPost",
+			inputFile:     "testdata/CustomerPost/CustomerPost.json",
+			refFile:       "testdata/CustomerPost/generated.ref.go",
+			clientRefFile: "testdata/CustomerPost/client.ref.go",
 		},
 	}
 
@@ -163,7 +166,14 @@ func TestGenerate(t *testing.T) {
 				}
 
 				if tt.clientRefFile != "" {
-					if err := os.WriteFile(tt.clientRefFile, []byte(clientCode), 0o644); err != nil {
+					if clientCode == "" {
+						// No physical golden file for "no client.go generated" — an
+						// empty file isn't valid Go and trips gofmt/lint on the
+						// fixture tree. Absence of the file is itself the signal.
+						if err := os.Remove(tt.clientRefFile); err != nil && !os.IsNotExist(err) {
+							t.Fatalf("removing stale golden client file %s: %v", tt.clientRefFile, err)
+						}
+					} else if err := os.WriteFile(tt.clientRefFile, []byte(clientCode), 0o644); err != nil {
 						t.Fatalf("updating golden client file %s: %v", tt.clientRefFile, err)
 					}
 				}
@@ -193,9 +203,11 @@ func TestGenerate(t *testing.T) {
 
 			if tt.clientRefFile != "" {
 				wantClient, err := os.ReadFile(tt.clientRefFile)
-				if err != nil {
+				if err != nil && !os.IsNotExist(err) {
 					t.Fatalf("reading expected client fixture: %v", err)
 				}
+				// A missing file means the fixture expects no client.go at all
+				// (e.g. no operationId) — wantClient stays "" in that case.
 
 				if diff := cmp.Diff(string(wantClient), clientCode); diff != "" {
 					t.Errorf("generated client output does not match %s (-want +got):\n%s", tt.clientRefFile, diff)

@@ -33,6 +33,15 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 The above is the authoritative rule set for OpenAPI→Go type mapping. Treat it as binding
 whenever generating or reviewing generator behavior, not just as background reading.
 
+## Client-generation rules
+
+@rules/client-mapping.md
+
+The above is the authoritative rule set for OpenAPI paths → generated `client.go`. It's a
+separate concern from type-mapping.md (operation → Client method, not schema → Go type) but
+depends on it: every type name client.go references is reused verbatim from what
+type-mapping.md's rules already produced for the main generated file.
+
 ## Architecture
 
 - **`openapi/schema.go`** — the OpenAPI Object model. Anything that can be either an inline
@@ -67,6 +76,16 @@ whenever generating or reviewing generator behavior, not just as background read
     live in the output package instead of being imported from this module (see type-mapping.md
     for which formats/keywords trigger each flag). `cmd/openapi2go` writes these files next to
     `-o`'s output file; in stdout mode (no `-o`) it just lists their names on stderr.
+- **`generator/client.go`** — implements the "Client-generation rules" above. `walkOperation`
+  (in generator.go) builds one `clientMethodDef` per operation from the exact type names its
+  own Params/requestBody/response resolution calls return — `registerParamsStruct`,
+  `registerOperationRequestBody`, and `walkOperationResponses` all return the type name they
+  registered specifically so client.go generation can capture it without re-deriving anything.
+  `registerClientMethod` drops the method if the operation had no `operationId`; `renderClient`
+  emits the `Client` type plus one method per surviving `clientMethodDef`, or `""` if there were
+  none. `Generate`'s fourth return value is this rendered (and `go/format.Source`-formatted)
+  client code; `cmd/openapi2go` writes it as `client.go` next to `-o`'s output file (and, in
+  stdout mode, just notes that one could be generated).
 - **`cmd/openapi2go`** — the CLI entrypoint (`generate` subcommand). Note `reorderFlagsFirst`:
   it hoists `-o`/`-pkg` in front of the positional spec path before calling `flag.Parse`, since
   Go's `flag` package stops parsing at the first non-flag argument.
@@ -85,6 +104,18 @@ that's the existing convention. Nearly every `testdata/` fixture is wired into `
 formats, etc.); `testdata/GenericSchema/` is the one exception left unwired — a monolithic spec
 covering the same primitive/format/required scenarios plus `readOnly`/`writeOnly` (unmapped
 keywords — see type-mapping.md). Check before assuming a scenario is covered.
+
+Client-generation coverage (client-mapping.md) is wired up per-fixture via an opt-in
+`clientRefFile` field on the test table entry, separate from `refFile` — most fixtures leave it
+unset, so absence there doesn't imply the client generator was ever run against that fixture.
+When `clientRefFile` is set but the operation resolves to no client method at all (no
+`operationId` anywhere in the spec), the convention is to have **no** golden file on disk rather
+than an empty one — an empty `.go` file isn't valid Go and trips `gofmt -l .`/lint on the
+fixture tree, so a missing file is itself the "expect no client.go" assertion (`UPDATE_GOLDEN`
+removes a stale file instead of writing an empty one; the compare path treats a missing file as
+`""`). As of this writing, `Customer`, `CustomerPost`, `PathParameters`, and `BasePath` have
+`clientRefFile` wired up; other fixtures with operations (e.g. any others with a `paths` block)
+have not been checked yet and may or may not already generate correct client code.
 
 ## `api/openapi.json`
 
