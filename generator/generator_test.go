@@ -14,9 +14,10 @@ func TestGenerate(t *testing.T) {
 	update := os.Getenv("UPDATE_GOLDEN") != ""
 
 	tests := []struct {
-		name      string
-		inputFile string
-		refFile   string
+		name          string
+		inputFile     string
+		refFile       string
+		clientRefFile string // "" skips the client.go comparison — see Customer's entry
 	}{
 		{
 			name:      "CustomerDetailCompanyResponseDto",
@@ -119,9 +120,10 @@ func TestGenerate(t *testing.T) {
 			refFile:   "testdata/PathParameters/generated.ref.go",
 		},
 		{
-			name:      "Customer",
-			inputFile: "testdata/Customer/Customer.json",
-			refFile:   "testdata/Customer/generated.ref.go",
+			name:          "Customer",
+			inputFile:     "testdata/Customer/Customer.json",
+			refFile:       "testdata/Customer/generated.ref.go",
+			clientRefFile: "testdata/Customer/client.ref.go",
 		},
 		{
 			name:      "CustomerPost",
@@ -142,7 +144,7 @@ func TestGenerate(t *testing.T) {
 				t.Fatalf("unmarshaling input fixture: %v", err)
 			}
 
-			got, supportFiles, err := Generate(&spec, "generated")
+			got, supportFiles, clientCode, err := Generate(&spec, "generated")
 			if err != nil {
 				t.Fatalf("Generate: %v", err)
 			}
@@ -157,6 +159,12 @@ func TestGenerate(t *testing.T) {
 				for name, content := range supportFiles {
 					if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 						t.Fatalf("updating golden support file %s: %v", name, err)
+					}
+				}
+
+				if tt.clientRefFile != "" {
+					if err := os.WriteFile(tt.clientRefFile, []byte(clientCode), 0o644); err != nil {
+						t.Fatalf("updating golden client file %s: %v", tt.clientRefFile, err)
 					}
 				}
 
@@ -180,6 +188,17 @@ func TestGenerate(t *testing.T) {
 
 				if diff := cmp.Diff(string(wantSupport), content); diff != "" {
 					t.Errorf("generated support file %s does not match (-want +got):\n%s", name, diff)
+				}
+			}
+
+			if tt.clientRefFile != "" {
+				wantClient, err := os.ReadFile(tt.clientRefFile)
+				if err != nil {
+					t.Fatalf("reading expected client fixture: %v", err)
+				}
+
+				if diff := cmp.Diff(string(wantClient), clientCode); diff != "" {
+					t.Errorf("generated client output does not match %s (-want +got):\n%s", tt.clientRefFile, diff)
 				}
 			}
 		})

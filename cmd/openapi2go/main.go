@@ -108,7 +108,7 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 
-	code, supportFiles, err := generator.Generate(&spec, *pkg)
+	code, supportFiles, clientCode, err := generator.Generate(&spec, *pkg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to generate Go code:", err)
 		os.Exit(1)
@@ -124,6 +124,10 @@ func runGenerate(args []string) {
 			}
 		}
 
+		if clientCode != "" {
+			fmt.Fprintln(os.Stderr, "note: a client.go can also be generated; pass -o to write it as a file")
+		}
+
 		return
 	}
 
@@ -136,6 +140,13 @@ func runGenerate(args []string) {
 	for name, content := range supportFiles {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), generatedFileMode); err != nil {
 			fmt.Fprintln(os.Stderr, "failed to write support file:", err)
+			os.Exit(1)
+		}
+	}
+
+	if clientCode != "" {
+		if err := os.WriteFile(filepath.Join(dir, "client.go"), []byte(clientCode), generatedFileMode); err != nil {
+			fmt.Fprintln(os.Stderr, "failed to write client file:", err)
 			os.Exit(1)
 		}
 	}

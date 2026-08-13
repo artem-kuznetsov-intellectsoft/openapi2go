@@ -28,6 +28,14 @@ type fieldDef struct {
 	typ      string
 	jsonTag  string
 	embedded bool
+
+	// paramName and in are set only for a Params struct field (see
+	// buildParamField) — the original (JSON) parameter name and its location
+	// ("path", "query", "header", "cookie") — so client.go generation can
+	// place the value correctly on the outgoing request. Unset for ordinary
+	// schema fields.
+	paramName string
+	in        string
 }
 
 type structDef struct {
@@ -48,6 +56,7 @@ type generator struct {
 	enums             []*enumDef
 	structs           []*structDef
 	pendingInline     []*pendingInlineStruct
+	clientMethods     []*clientMethodDef
 	usesDateTime      bool
 	usesDate          bool
 	usesOneOf         bool
@@ -73,7 +82,11 @@ type pendingInlineStruct struct {
 // clause rewritten to pkgName. Callers write these alongside code's own
 // output file so the generated package defines DateTime, Date, OneOf, and
 // Discriminated itself rather than importing this module's openapi package.
-func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string, error) {
+// The fourth return value, clientCode, is client.go's source: a Client type
+// with one method per operation that has an operationId (see
+// registerClientMethod/renderClient), built from the exact same type names
+// code declares. It is "" when spec has no such operation.
+func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string, string, error) {
 	g := &generator{
 		schemas:     map[string]*openapi.Schema{},
 		parameters:  map[string]*openapi.Parameter{},
@@ -82,20 +95,7 @@ func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string,
 		structIndex: map[string]*structDef{},
 	}
 
-	if spec.Components != nil {
-		for name, ref := range spec.Components.Schemas {
-			if ref != nil && ref.Value != nil {
-				g.schemas[name] = ref.Value
-			}
-		}
-
-		for name, ref := range spec.Components.Parameters {
-			if ref != nil && ref.Value != nil {
-				g.parameters[name] = ref.Value
-			}
-		}
-	}
-
+	g.loadComponents(spec.Components)
 	g.walkPaths(spec.Paths)
 
 	for _, name := range sortedKeys(g.schemas) {
@@ -106,10 +106,54 @@ func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string,
 
 	formatted, err := format.Source([]byte(src))
 	if err != nil {
-		return src, nil, fmt.Errorf("formatting generated code: %w", err)
+		return src, nil, "", fmt.Errorf("formatting generated code: %w", err)
 	}
 
-	return string(formatted), g.supportFiles(pkgName), nil
+	clientCode, clientSrc, err := g.formatClientCode(pkgName)
+	if err != nil {
+		return string(formatted), g.supportFiles(pkgName), clientSrc, fmt.Errorf("formatting generated client code: %w", err)
+	}
+
+	return string(formatted), g.supportFiles(pkgName), clientCode, nil
+}
+
+// loadComponents copies every named schema/parameter out of components into
+// g.schemas/g.parameters, skipping unresolved $refs (which can't occur in a
+// valid spec's own components section, but the RefOr shape allows it).
+func (g *generator) loadComponents(components *openapi.Components) {
+	if components == nil {
+		return
+	}
+
+	for name, ref := range components.Schemas {
+		if ref != nil && ref.Value != nil {
+			g.schemas[name] = ref.Value
+		}
+	}
+
+	for name, ref := range components.Parameters {
+		if ref != nil && ref.Value != nil {
+			g.parameters[name] = ref.Value
+		}
+	}
+}
+
+// formatClientCode renders and formats client.go's source, returning "" for
+// both if g recorded no client methods. On a format error it also returns
+// the unformatted source, mirroring Generate's own error path above, so a
+// caller can inspect what failed to format.
+func (g *generator) formatClientCode(pkgName string) (string, string, error) {
+	src := g.renderClient(pkgName)
+	if src == "" {
+		return "", "", nil
+	}
+
+	formattedBytes, err := format.Source([]byte(src))
+	if err != nil {
+		return "", src, err
+	}
+
+	return string(formattedBytes), src, nil
 }
 
 // supportFiles returns the subset of openapi.SupportFiles that the schemas
@@ -155,26 +199,88 @@ func (g *generator) walkPaths(paths openapi.Paths) {
 			continue
 		}
 
-		for _, op := range []*openapi.Operation{
-			item.Get, item.Put, item.Post, item.Delete,
-			item.Options, item.Head, item.Patch, item.Trace,
+		for _, mo := range []struct {
+			httpMethod string
+			op         *openapi.Operation
+		}{
+			{"http.MethodGet", item.Get},
+			{"http.MethodPut", item.Put},
+			{"http.MethodPost", item.Post},
+			{"http.MethodDelete", item.Delete},
+			{"http.MethodOptions", item.Options},
+			{"http.MethodHead", item.Head},
+			{"http.MethodPatch", item.Patch},
+			{"http.MethodTrace", item.Trace},
 		} {
-			if op != nil {
-				g.walkOperation(op, item.Parameters)
+			if mo.op != nil {
+				g.walkOperation(path, mo.httpMethod, mo.op, item.Parameters)
 			}
 		}
 	}
 }
 
-func (g *generator) walkOperation(op *openapi.Operation, pathParams []*openapi.RefOr[*openapi.Parameter]) {
-	g.registerParamsStruct(op, pathParams)
+// walkOperation registers op's Params/requestBody/response types (as before)
+// and additionally records a clientMethodDef from the exact type names those
+// steps resolve, so client.go generation can never drift from what was
+// actually declared — see registerClientMethod.
+func (g *generator) walkOperation(
+	path, httpMethod string,
+	op *openapi.Operation,
+	pathParams []*openapi.RefOr[*openapi.Parameter],
+) {
+	paramsType := g.registerParamsStruct(op, pathParams)
+	requestType := g.registerOperationRequestBody(op)
+	responseType, clientErrors := g.walkOperationResponses(op)
 
-	if op.RequestBody != nil && op.RequestBody.Value != nil {
-		if schema := firstJSONSchema(op.RequestBody.Value.Content); schema != nil {
-			g.resolveRefOrType("requestBody", schema)
-			g.flushPendingInline()
-		}
+	g.registerClientMethod(&clientMethodDef{
+		name:         toPascalCase(op.OperationID),
+		operationID:  op.OperationID,
+		httpMethod:   httpMethod,
+		path:         path,
+		paramsType:   paramsType,
+		requestType:  requestType,
+		responseType: responseType,
+		errors:       clientErrors,
+	})
+}
+
+// registerOperationRequestBody generates op's requestBody schema, exactly
+// like registerInlineResponse does for a response, and returns its Go type
+// name ("" if op has no requestBody or content).
+func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
+	if op.RequestBody == nil || op.RequestBody.Value == nil {
+		return ""
 	}
+
+	schema := firstJSONSchema(op.RequestBody.Value.Content)
+	if schema == nil {
+		return ""
+	}
+
+	requestType, _ := g.resolveRefOrType("requestBody", schema)
+	g.flushPendingInline()
+
+	return requestType
+}
+
+// minErrorStatus/maxErrorStatus and minSuccessStatus/maxSuccessStatus bound
+// the 4xx/5xx and 2xx status-code ranges walkOperationResponses classifies
+// each response by.
+const (
+	minErrorStatus   = 400
+	maxErrorStatus   = 599
+	minSuccessStatus = 200
+	maxSuccessStatus = 299
+)
+
+// walkOperationResponses registers every response of op (error and
+// non-error alike, via registerErrorResponse/registerInlineResponse) and
+// reports the pieces a client method needs: the Go type name of the first
+// 2xx response with a schema (in status-code order), and every 4xx/5xx case
+// for the method's response switch.
+func (g *generator) walkOperationResponses(op *openapi.Operation) (string, []clientErrorDef) {
+	responseType := ""
+	var clientErrors []clientErrorDef
 
 	for _, code := range sortedKeys(op.Responses) {
 		resp := op.Responses[code]
@@ -182,16 +288,43 @@ func (g *generator) walkOperation(op *openapi.Operation, pathParams []*openapi.R
 			continue
 		}
 
-		status, err := strconv.Atoi(code)
-		if err == nil && status >= 400 && status <= 599 {
-			g.registerErrorResponse(code, resp.Value)
-			g.flushPendingInline()
+		errDef, successType := g.registerOperationResponse(code, resp.Value)
+		if errDef != nil {
+			clientErrors = append(clientErrors, *errDef)
 			continue
 		}
 
-		g.registerInlineResponse(code, resp.Value)
-		g.flushPendingInline()
+		if responseType == "" && successType != "" {
+			responseType = successType
+		}
 	}
+
+	return responseType, clientErrors
+}
+
+// registerOperationResponse registers one response code's schema (via
+// registerErrorResponse for 4xx/5xx, registerInlineResponse otherwise) and
+// classifies it for walkOperationResponses: a 4xx/5xx code returns a non-nil
+// errDef; a 2xx code with a schema returns its Go type name as successType.
+func (g *generator) registerOperationResponse(code string, resp *openapi.Response) (*clientErrorDef, string) {
+	status, statusErr := strconv.Atoi(code)
+
+	if statusErr == nil && status >= minErrorStatus && status <= maxErrorStatus {
+		hasSchema := firstJSONSchema(resp.Content) != nil
+		typeName := g.registerErrorResponse(code, resp)
+		g.flushPendingInline()
+
+		return &clientErrorDef{code: code, typ: typeName, hasSchema: hasSchema}, ""
+	}
+
+	typeName := g.registerInlineResponse(code, resp)
+	g.flushPendingInline()
+
+	if statusErr == nil && status >= minSuccessStatus && status <= maxSuccessStatus {
+		return nil, typeName
+	}
+
+	return nil, ""
 }
 
 // registerInlineResponse generates a type for a non-error (1xx/2xx/3xx, or
@@ -200,18 +333,22 @@ func (g *generator) walkOperation(op *openapi.Operation, pathParams []*openapi.R
 // allOf-wrapped nullable $ref) into components.schemas is left untouched
 // here: it has no inline content of its own to generate, so it's picked up
 // by the later alphabetical components.schemas pass instead, preserving the
-// existing declaration order for named 2xx/3xx/default schemas.
-func (g *generator) registerInlineResponse(code string, resp *openapi.Response) {
+// existing declaration order for named 2xx/3xx/default schemas. Returns the
+// response's Go type name in both cases (even though the $ref case doesn't
+// generate it here), or "" if resp has no schema at all.
+func (g *generator) registerInlineResponse(code string, resp *openapi.Response) string {
 	schema := firstJSONSchema(resp.Content)
 	if schema == nil {
-		return
+		return ""
 	}
 
-	if _, _, ok := unwrapRef(schema); ok {
-		return
+	if name, _, ok := unwrapRef(schema); ok {
+		return name
 	}
 
-	g.resolveRefOrType("Response"+toPascalCase(code), schema)
+	typeName, _ := g.resolveRefOrType("Response"+toPascalCase(code), schema)
+
+	return typeName
 }
 
 // registerParamsStruct generates a "<PascalCase(operationId)>Params" struct
@@ -219,10 +356,13 @@ func (g *generator) registerInlineResponse(code string, resp *openapi.Response) 
 // on the enclosing PathItem) with op.Parameters (operation-level parameters
 // override a path-level one of the same name). Skipped when op has no
 // operationId (there would be no name to give the struct) or no parameters
-// at all.
-func (g *generator) registerParamsStruct(op *openapi.Operation, pathParams []*openapi.RefOr[*openapi.Parameter]) {
+// at all. Returns the struct's name, or "" when skipped.
+func (g *generator) registerParamsStruct(
+	op *openapi.Operation,
+	pathParams []*openapi.RefOr[*openapi.Parameter],
+) string {
 	if op.OperationID == "" {
-		return
+		return ""
 	}
 
 	byName := map[string]*openapi.Parameter{}
@@ -238,12 +378,12 @@ func (g *generator) registerParamsStruct(op *openapi.Operation, pathParams []*op
 	}
 
 	if len(byName) == 0 {
-		return
+		return ""
 	}
 
 	name := toPascalCase(op.OperationID) + "Params"
 	if g.generated[name] {
-		return
+		return name
 	}
 	g.generated[name] = true
 
@@ -259,6 +399,8 @@ func (g *generator) registerParamsStruct(op *openapi.Operation, pathParams []*op
 	}
 	g.structs = append(g.structs, def)
 	g.structIndex[name] = def
+
+	return name
 }
 
 // resolveParameter dereferences a parameter that may be a direct $ref into
@@ -292,7 +434,7 @@ func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
 		typ = "*" + typ
 	}
 
-	return fieldDef{name: toPascalCase(param.Name), typ: typ}
+	return fieldDef{name: toPascalCase(param.Name), typ: typ, paramName: param.Name, in: param.In}
 }
 
 // errorTODOBody is the Error() method body for every 4xx/5xx response type:
@@ -305,30 +447,34 @@ const errorTODOBody = `panic("TODO: define the output")`
 // registerErrorResponse generates the type for a 4xx/5xx response and gives
 // it an `Error() string` method: a schema-backed response resolves to its
 // named struct, while a response with no content synthesizes an empty
-// "Response<code>" struct. Both get the same errorTODOBody.
-func (g *generator) registerErrorResponse(code string, resp *openapi.Response) {
+// "Response<code>" struct. Both get the same errorTODOBody. Returns the
+// error type's Go name.
+func (g *generator) registerErrorResponse(code string, resp *openapi.Response) string {
 	schema := firstJSONSchema(resp.Content)
 	if schema == nil {
-		g.registerNoContentErrorResponse(code)
-		return
+		return g.registerNoContentErrorResponse(code)
 	}
 
 	typeName, _ := g.resolveRefOrType("Response"+code, schema)
 	if def, ok := g.structIndex[typeName]; ok && def.errorBody == "" {
 		def.errorBody = errorTODOBody
 	}
+
+	return typeName
 }
 
-func (g *generator) registerNoContentErrorResponse(code string) {
+func (g *generator) registerNoContentErrorResponse(code string) string {
 	name := "Response" + code
 	if g.generated[name] {
-		return
+		return name
 	}
 	g.generated[name] = true
 
 	def := &structDef{name: name, errorBody: errorTODOBody}
 	g.structs = append(g.structs, def)
 	g.structIndex[name] = def
+
+	return name
 }
 
 // firstJSONSchema returns the schema of the first media type in content,
