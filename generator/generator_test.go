@@ -10,6 +10,8 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	update := os.Getenv("UPDATE_GOLDEN") != ""
+
 	tests := []struct {
 		name      string
 		inputFile string
@@ -122,6 +124,13 @@ func TestGenerate(t *testing.T) {
 			got, err := Generate(&spec, "generated")
 			if err != nil {
 				t.Fatalf("Generate: %v", err)
+			}
+
+			if update {
+				if err := os.WriteFile(tt.refFile, []byte(got), 0o644); err != nil {
+					t.Fatalf("updating golden file %s: %v", tt.refFile, err)
+				}
+				return
 			}
 
 			want, err := os.ReadFile(tt.refFile)
