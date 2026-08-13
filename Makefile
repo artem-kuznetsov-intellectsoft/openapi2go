@@ -1,7 +1,7 @@
-.PHONY: install update-golden
+.PHONY: install test
 
 install:
 	go install ./cmd/openapi2go
 
-update-golden:
+test:
 	UPDATE_GOLDEN=1 go test ./generator -run TestGenerate
