@@ -86,6 +86,11 @@ func TestGenerate(t *testing.T) {
 			refFile:   "testdata/PrimitivesAndFormats/generated.ref.go",
 		},
 		{
+			name:      "Formats",
+			inputFile: "testdata/Formats/Formats.json",
+			refFile:   "testdata/Formats/generated.ref.go",
+		},
+		{
 			name:      "Vehicle",
 			inputFile: "testdata/Vehicle/Vehicle.json",
 			refFile:   "testdata/Vehicle/generated.ref.go",

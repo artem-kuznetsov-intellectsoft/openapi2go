@@ -41,6 +41,7 @@ type generator struct {
 	enums             []*enumDef
 	structs           []*structDef
 	usesTime          bool
+	usesDate          bool
 	usesOneOf         bool
 	usesDiscriminated bool
 }
@@ -245,6 +246,16 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 			return "time.Time", nullable
 		}
 
+		if schema.Format == "date" {
+			g.usesDate = true
+
+			return "openapi.Date", nullable
+		}
+
+		if schema.Format == "byte" {
+			return "[]byte", nullable
+		}
+
 		return "string", nullable
 	case "integer":
 		if schema.Format == "int32" {
@@ -289,7 +300,7 @@ func (g *generator) render(pkgName string) string {
 	if g.usesTime {
 		imports = append(imports, `"time"`)
 	}
-	if g.usesOneOf || g.usesDiscriminated {
+	if g.usesOneOf || g.usesDiscriminated || g.usesDate {
 		imports = append(imports, `"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"`)
 	}
 

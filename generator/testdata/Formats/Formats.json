@@ -1,0 +1,112 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OpenAPI Spec Predefined Type-Format Pairs Example",
+    "description": "An OpenAPI 3.0 document showing all official type-format pairs defined in the specification.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/example": {
+      "post": {
+        "summary": "Example endpoint using all format pairs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllSpecFormats"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllSpecFormats"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AllSpecFormats": {
+        "type": "object",
+        "description": "A schema displaying all official data type format pairs registered in the OpenAPI Specification 3.0.",
+        "properties": {
+          "integer_int32": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Signed 32-bit integer",
+            "example": 2147483647
+          },
+          "integer_int64": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Signed 64-bit integer",
+            "example": 9223372036854775807
+          },
+          "number_float": {
+            "type": "number",
+            "format": "float",
+            "description": "Single-precision floating-point number",
+            "example": 3.14
+          },
+          "number_double": {
+            "type": "number",
+            "format": "double",
+            "description": "Double-precision floating-point number",
+            "example": 3.141592653589793
+          },
+          "string_byte": {
+            "type": "string",
+            "format": "byte",
+            "description": "Base64-encoded characters representing binary data",
+            "example": "U3dhZ2dlciByb2Nrcw=="
+          },
+          "string_binary": {
+            "type": "string",
+            "format": "binary",
+            "description": "Any sequence of octets representing raw binary data",
+            "example": "raw-binary-octets"
+          },
+          "string_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Full calendar date as defined by RFC3339 full-date",
+            "example": "2026-08-12"
+          },
+          "string_date-time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Complete date-time string as defined by RFC3339 date-time",
+            "example": "2026-08-12T15:52:20Z"
+          },
+          "string_password": {
+            "type": "string",
+            "format": "password",
+            "description": "A string value suggesting that UI editors mask the input",
+            "example": "secret_password_hint"
+          }
+        },
+        "required": [
+          "integer_int32",
+          "integer_int64",
+          "number_float",
+          "number_double",
+          "string_byte",
+          "string_binary",
+          "string_date",
+          "string_date-time",
+          "string_password"
+        ]
+      }
+    }
+  }
+}
