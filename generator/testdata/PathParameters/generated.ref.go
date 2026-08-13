@@ -1,5 +1,6 @@
 package generated
 
+// GetUserByIdParams is generated for operationId get-user-by-id.
 type GetUserByIdParams struct {
 	MiddleName *string
 	UserId     string

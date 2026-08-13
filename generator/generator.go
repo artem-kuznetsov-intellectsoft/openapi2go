@@ -225,7 +225,11 @@ func (g *generator) registerParamsStruct(op *openapi.Operation, pathParams []*op
 		fields = append(fields, g.buildParamField(byName[paramName]))
 	}
 
-	def := &structDef{name: name, fields: fields}
+	def := &structDef{
+		name:    name,
+		comment: fmt.Sprintf("%s is generated for operationId %s.", name, op.OperationID),
+		fields:  fields,
+	}
 	g.structs = append(g.structs, def)
 	g.structIndex[name] = def
 }
