@@ -12,13 +12,13 @@ type ResponseBadRequest struct {
 }
 
 func (r ResponseBadRequest) Error() error {
-	return errors.New(r.Message)
+	panic("TODO: define the output")
 }
 
 type Response404 struct{}
 
 func (r Response404) Error() error {
-	return errors.New("404")
+	panic("TODO: define the output")
 }
 
 // ResponseOK is generated from components.schemas.ResponseOK.
