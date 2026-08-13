@@ -31,7 +31,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/artem-kuznetsov-intellectsoft/playground
+        - github.com/artem-kuznetsov-intellectsoft/openapi2go
     gofumpt:
       extra-rules: true
 issues:
