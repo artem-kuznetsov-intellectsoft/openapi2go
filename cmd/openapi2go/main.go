@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -16,24 +18,39 @@ const usage = "usage: openapi2go generate <openapi-spec-path> [-o output.go] [-p
 
 const generatedFileMode = 0o644
 
-// minArgs is the fewest os.Args entries needed to have a subcommand: the
-// binary name itself plus the subcommand (e.g. "generate" or "version").
-const minArgs = 2
+var (
+	errUsage          = errors.New(usage)
+	errUnknownCommand = errors.New("unknown command")
+)
 
 func main() {
-	if len(os.Args) < minArgs {
-		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(1)
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+// run is the single point that converts a subcommand's error into a printed
+// message and an exit code, so every function below it can be exercised with
+// bytes.Buffer stand-ins for stdout/stderr instead of calling os.Exit itself.
+func run(args []string, stdout, stderr io.Writer) int {
+	if err := dispatch(args, stdout, stderr); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
 	}
 
-	switch os.Args[1] {
+	return 0
+}
+
+func dispatch(args []string, stdout, stderr io.Writer) error {
+	if len(args) < 1 {
+		return errUsage
+	}
+
+	switch args[0] {
 	case "generate":
-		runGenerate(os.Args[2:])
+		return runGenerate(args[1:], stdout, stderr)
 	case "version":
-		runVersion()
+		return runVersion(stdout)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n%s\n", os.Args[1], usage)
-		os.Exit(1)
+		return fmt.Errorf("%w %q\n%s", errUnknownCommand, args[0], usage)
 	}
 }
 
@@ -44,7 +61,7 @@ func main() {
 // revision hash to print, matching git's default abbreviated-hash length.
 const shortRevisionLen = 7
 
-func runVersion() {
+func runVersion(stdout io.Writer) error {
 	revision := "unknown"
 
 	if info, ok := debug.ReadBuildInfo(); ok {
@@ -60,9 +77,9 @@ func runVersion() {
 		}
 	}
 
-	// A failed write to stdout isn't actionable here, same as the
-	// fmt.Fprintln(os.Stderr, ...) calls elsewhere in this file.
-	_, _ = fmt.Fprintln(os.Stdout, revision)
+	_, _ = fmt.Fprintln(stdout, revision)
+
+	return nil
 }
 
 // reorderFlagsFirst moves recognized valued flags (and their values) to the
@@ -97,98 +114,104 @@ func reorderFlagsFirst(args []string, valuedFlags ...string) []string {
 	return append(flags, rest...)
 }
 
-func runGenerate(args []string) {
-	output, pkg, specPath := parseGenerateFlags(args)
-	spec := loadSpec(specPath)
+func runGenerate(args []string, stdout, stderr io.Writer) error {
+	output, pkg, specPath, err := parseGenerateFlags(args)
+	if err != nil {
+		return err
+	}
+
+	spec, err := loadSpec(specPath)
+	if err != nil {
+		return err
+	}
 
 	code, supportFiles, clientCode, err := generator.Generate(&spec, pkg)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to generate Go code:", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to generate Go code: %w", err)
 	}
 
 	if output == "" {
-		writeGeneratedStdout(code, supportFiles, clientCode)
-		return
+		writeGeneratedStdout(stdout, stderr, code, supportFiles, clientCode)
+		return nil
 	}
 
-	writeGeneratedFiles(output, code, supportFiles, clientCode)
+	return writeGeneratedFiles(output, code, supportFiles, clientCode)
 }
 
 // parseGenerateFlags parses the "generate" subcommand's flags and positional
-// spec-path argument, exiting the process on a missing spec path (fs itself
-// uses flag.ExitOnError, so Parse only returns after a successful parse).
-func parseGenerateFlags(args []string) (output, pkg, specPath string) {
-	fs := flag.NewFlagSet("generate", flag.ExitOnError)
+// spec-path argument. It never prints or exits itself: flag.ContinueOnError
+// with output discarded keeps callers in control of the single error-message
+// print site in run.
+func parseGenerateFlags(args []string) (output, pkg, specPath string, err error) {
+	fs := flag.NewFlagSet("generate", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
 	o := fs.String("o", "", "output file path for generated Go code (default: stdout)")
 	p := fs.String("pkg", "generated", "package name for generated Go code")
-	_ = fs.Parse(reorderFlagsFirst(args, "-o", "-pkg"))
 
-	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(1)
+	if err := fs.Parse(reorderFlagsFirst(args, "-o", "-pkg")); err != nil {
+		return "", "", "", err
 	}
 
-	return *o, *p, fs.Arg(0)
+	if fs.NArg() < 1 {
+		return "", "", "", errUsage
+	}
+
+	return *o, *p, fs.Arg(0), nil
 }
 
-// loadSpec reads and unmarshals the OpenAPI spec at specPath, exiting the
-// process on either failure.
-func loadSpec(specPath string) openapi.OpenAPI {
+// loadSpec reads and unmarshals the OpenAPI spec at specPath.
+func loadSpec(specPath string) (openapi.OpenAPI, error) {
 	data, err := os.ReadFile(specPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to read openapi spec:", err)
-		os.Exit(1)
+		return openapi.OpenAPI{}, fmt.Errorf("failed to read openapi spec: %w", err)
 	}
 
 	var spec openapi.OpenAPI
 	if err := json.Unmarshal(data, &spec); err != nil {
-		fmt.Fprintln(os.Stderr, "failed to unmarshal openapi spec:", err)
-		os.Exit(1)
+		return openapi.OpenAPI{}, fmt.Errorf("failed to unmarshal openapi spec: %w", err)
 	}
 
-	return spec
+	return spec, nil
 }
 
 // writeGeneratedStdout prints the generated code to stdout and, since no
 // output path was given to also write the support/client files to, notes
 // their availability on stderr instead.
-func writeGeneratedStdout(code string, supportFiles map[string]string, clientCode string) {
-	_, _ = fmt.Fprint(os.Stdout, code)
+func writeGeneratedStdout(stdout, stderr io.Writer, code string, supportFiles map[string]string, clientCode string) {
+	_, _ = fmt.Fprint(stdout, code)
 
 	if len(supportFiles) > 0 {
-		fmt.Fprintln(os.Stderr, "note: generated code needs the support types below; pass -o to also write them as files:")
+		fmt.Fprintln(stderr, "note: generated code needs the support types below; pass -o to also write them as files:")
 
 		for name := range supportFiles {
-			fmt.Fprintln(os.Stderr, " -", name)
+			fmt.Fprintln(stderr, " -", name)
 		}
 	}
 
 	if clientCode != "" {
-		fmt.Fprintln(os.Stderr, "note: a client.go can also be generated; pass -o to write it as a file")
+		fmt.Fprintln(stderr, "note: a client.go can also be generated; pass -o to write it as a file")
 	}
 }
 
 // writeGeneratedFiles writes the generated code, support files, and (if any)
-// client.go alongside output, exiting the process on any write failure.
-func writeGeneratedFiles(output, code string, supportFiles map[string]string, clientCode string) {
+// client.go alongside output.
+func writeGeneratedFiles(output, code string, supportFiles map[string]string, clientCode string) error {
 	if err := os.WriteFile(output, []byte(code), generatedFileMode); err != nil {
-		fmt.Fprintln(os.Stderr, "failed to write output file:", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to write output file: %w", err)
 	}
 
 	dir := filepath.Dir(output)
 	for name, content := range supportFiles {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), generatedFileMode); err != nil {
-			fmt.Fprintln(os.Stderr, "failed to write support file:", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to write support file: %w", err)
 		}
 	}
 
 	if clientCode != "" {
 		if err := os.WriteFile(filepath.Join(dir, "client.go"), []byte(clientCode), generatedFileMode); err != nil {
-			fmt.Fprintln(os.Stderr, "failed to write client file:", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to write client file: %w", err)
 		}
 	}
+
+	return nil
 }
