@@ -16,3 +16,6 @@ lint-fix:
 
 fmt:
 	golangci-lint fmt $(DIR)
+
+fmt-dry:
+	golangci-lint fmt -d $(DIR)
