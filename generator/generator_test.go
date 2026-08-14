@@ -11,15 +11,17 @@ import (
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 )
 
+type goldenTestCase struct {
+	name          string
+	inputFile     string
+	refFile       string
+	clientRefFile string // "" skips the client.go comparison — see Customer's entry
+}
+
 func TestGenerate(t *testing.T) {
 	update := os.Getenv("UPDATE_GOLDEN") != ""
 
-	tests := []struct {
-		name          string
-		inputFile     string
-		refFile       string
-		clientRefFile string // "" skips the client.go comparison — see Customer's entry
-	}{
+	tests := []goldenTestCase{
 		{
 			name:      "CustomerDetailCompanyResponseDto",
 			inputFile: "fixtures/CustomerDetailCompanyResponseDto/components.schemas.CustomerDetailCompanyResponseDto.json",
@@ -158,67 +160,87 @@ func TestGenerate(t *testing.T) {
 				t.Fatalf("Generate: %v", err)
 			}
 
-			dir := filepath.Dir(tt.refFile)
-
 			if update {
-				if err := os.WriteFile(tt.refFile, []byte(got), 0o644); err != nil {
-					t.Fatalf("updating golden file %s: %v", tt.refFile, err)
-				}
-
-				for name, content := range supportFiles {
-					if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
-						t.Fatalf("updating golden support file %s: %v", name, err)
-					}
-				}
-
-				if tt.clientRefFile != "" {
-					if clientCode == "" {
-						// No physical golden file for "no client.go generated" — an
-						// empty file isn't valid Go and trips gofmt/lint on the
-						// fixture tree. Absence of the file is itself the signal.
-						if err := os.Remove(tt.clientRefFile); err != nil && !os.IsNotExist(err) {
-							t.Fatalf("removing stale golden client file %s: %v", tt.clientRefFile, err)
-						}
-					} else if err := os.WriteFile(tt.clientRefFile, []byte(clientCode), 0o644); err != nil {
-						t.Fatalf("updating golden client file %s: %v", tt.clientRefFile, err)
-					}
-				}
-
+				writeGoldenFiles(t, tt, got, supportFiles, clientCode)
 				return
 			}
 
-			want, err := os.ReadFile(tt.refFile)
-			if err != nil {
-				t.Fatalf("reading expected fixture: %v", err)
-			}
-
-			if diff := cmp.Diff(string(want), got); diff != "" {
-				t.Errorf("generated output does not match %s (-want +got):\n%s", tt.refFile, diff)
-			}
-
-			for name, content := range supportFiles {
-				wantSupport, err := os.ReadFile(filepath.Join(dir, name))
-				if err != nil {
-					t.Fatalf("reading expected support file %s: %v", name, err)
-				}
-
-				if diff := cmp.Diff(string(wantSupport), content); diff != "" {
-					t.Errorf("generated support file %s does not match (-want +got):\n%s", name, diff)
-				}
-			}
-
-			if tt.clientRefFile != "" {
-				wantClient, err := os.ReadFile(tt.clientRefFile)
-				if err != nil && !os.IsNotExist(err) {
-					t.Fatalf("reading expected client fixture: %v", err)
-				}
-				// A missing file means the fixture expects no client.go at all
-				// (e.g. no operationId) — wantClient stays "" in that case.
-
-				if diff := cmp.Diff(string(wantClient), clientCode); diff != "" {
-					t.Errorf("generated client output does not match %s (-want +got):\n%s", tt.clientRefFile, diff)
-				}
-			}
+			compareGoldenFiles(t, tt, got, supportFiles, clientCode)
 		})
+	}
+}
+
+func writeGoldenFiles(t *testing.T, tt goldenTestCase, got string, supportFiles map[string]string, clientCode string) {
+	t.Helper()
+
+	dir := filepath.Dir(tt.refFile)
+
+	if err := os.WriteFile(tt.refFile, []byte(got), 0o644); err != nil {
+		t.Fatalf("updating golden file %s: %v", tt.refFile, err)
+	}
+
+	for name, content := range supportFiles {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("updating golden support file %s: %v", name, err)
+		}
+	}
+
+	if tt.clientRefFile == "" {
+		return
+	}
+
+	if clientCode != "" {
+		if err := os.WriteFile(tt.clientRefFile, []byte(clientCode), 0o644); err != nil {
+			t.Fatalf("updating golden client file %s: %v", tt.clientRefFile, err)
+		}
+		return
+	}
+
+	// No physical golden file for "no client.go generated" — an empty file
+	// isn't valid Go and trips gofmt/lint on the fixture tree. Absence of
+	// the file is itself the signal.
+	if err := os.Remove(tt.clientRefFile); err != nil && !os.IsNotExist(err) {
+		t.Fatalf("removing stale golden client file %s: %v", tt.clientRefFile, err)
+	}
+}
+
+func compareGoldenFiles(t *testing.T, tt goldenTestCase, got string, supportFiles map[string]string, clientCode string) {
+	t.Helper()
+
+	dir := filepath.Dir(tt.refFile)
+
+	want, err := os.ReadFile(tt.refFile)
+	if err != nil {
+		t.Fatalf("reading expected fixture: %v", err)
+	}
+
+	if diff := cmp.Diff(string(want), got); diff != "" {
+		t.Errorf("generated output does not match %s (-want +got):\n%s", tt.refFile, diff)
+	}
+
+	for name, content := range supportFiles {
+		wantSupport, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatalf("reading expected support file %s: %v", name, err)
+		}
+
+		if diff := cmp.Diff(string(wantSupport), content); diff != "" {
+			t.Errorf("generated support file %s does not match (-want +got):\n%s", name, diff)
+		}
+	}
+
+	if tt.clientRefFile == "" {
+		return
+	}
+
+	wantClient, err := os.ReadFile(tt.clientRefFile)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("reading expected client fixture: %v", err)
+	}
+	// A missing file means the fixture expects no client.go at all (e.g. no
+	// operationId) — wantClient stays "" in that case.
+
+	if diff := cmp.Diff(string(wantClient), clientCode); diff != "" {
+		t.Errorf("generated client output does not match %s (-want +got):\n%s", tt.clientRefFile, diff)
 	}
 }
