@@ -42,6 +42,8 @@ linters:
     gosec:
       excludes:
         - G306 # Expect WriteFile permissions to be 0600 or less
+    revive:
+      enable-default-rules: true # CRITICAL: Ensure general default checks are still run
 
 formatters:
   enable:
