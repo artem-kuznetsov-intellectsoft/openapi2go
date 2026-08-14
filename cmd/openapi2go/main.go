@@ -16,8 +16,12 @@ const usage = "usage: openapi2go generate <openapi-spec-path> [-o output.go] [-p
 
 const generatedFileMode = 0o644
 
+// minArgs is the fewest os.Args entries needed to have a subcommand: the
+// binary name itself plus the subcommand (e.g. "generate" or "version").
+const minArgs = 2
+
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < minArgs {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(1)
 	}
@@ -36,6 +40,10 @@ func main() {
 // runVersion prints the short commit hash Go's toolchain stamps into the
 // binary from VCS info at build time (go install/build from a git checkout),
 // available via debug.ReadBuildInfo without any custom ldflags.
+// shortRevisionLen is the number of leading characters of a full VCS
+// revision hash to print, matching git's default abbreviated-hash length.
+const shortRevisionLen = 7
+
 func runVersion() {
 	revision := "unknown"
 
@@ -43,8 +51,8 @@ func runVersion() {
 		for _, s := range info.Settings {
 			if s.Key == "vcs.revision" {
 				revision = s.Value
-				if len(revision) > 7 {
-					revision = revision[:7]
+				if len(revision) > shortRevisionLen {
+					revision = revision[:shortRevisionLen]
 				}
 
 				break
@@ -52,14 +60,19 @@ func runVersion() {
 		}
 	}
 
-	fmt.Println(revision)
+	// A failed write to stdout isn't actionable here, same as the
+	// fmt.Fprintln(os.Stderr, ...) calls elsewhere in this file.
+	_, _ = fmt.Fprintln(os.Stdout, revision)
 }
 
 // reorderFlagsFirst moves recognized valued flags (and their values) to the
 // front of args, since flag.FlagSet.Parse stops at the first non-flag token
 // and would otherwise ignore flags placed after the positional spec path.
 func reorderFlagsFirst(args []string, valuedFlags ...string) []string {
-	isValuedFlag := make(map[string]bool, len(valuedFlags)*2)
+	// Each valued flag is indexed under both "name" and "-name", hence *2.
+	const aliasesPerFlag = 2
+
+	isValuedFlag := make(map[string]bool, len(valuedFlags)*aliasesPerFlag)
 	for _, f := range valuedFlags {
 		isValuedFlag[f] = true
 		isValuedFlag["-"+f] = true
@@ -87,7 +100,9 @@ func runGenerate(args []string) {
 	fs := flag.NewFlagSet("generate", flag.ExitOnError)
 	output := fs.String("o", "", "output file path for generated Go code (default: stdout)")
 	pkg := fs.String("pkg", "generated", "package name for generated Go code")
-	fs.Parse(reorderFlagsFirst(args, "-o", "-pkg"))
+	// fs uses flag.ExitOnError, so Parse only returns after a successful
+	// parse — any failure exits the process itself.
+	_ = fs.Parse(reorderFlagsFirst(args, "-o", "-pkg"))
 
 	if fs.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, usage)
@@ -115,7 +130,7 @@ func runGenerate(args []string) {
 	}
 
 	if *output == "" {
-		fmt.Print(code)
+		_, _ = fmt.Fprint(os.Stdout, code)
 
 		if len(supportFiles) > 0 {
 			fmt.Fprintln(os.Stderr, "note: generated code needs the support types below; pass -o to also write them as files:")
