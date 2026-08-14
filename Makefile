@@ -1,4 +1,4 @@
-.PHONY: install test update-golden lint lint-all lint-all-fix
+.PHONY: install test update-golden lint lint-all lint-all-fix fmt-all
 
 install:
 	go install ./cmd/openapi2go
@@ -19,4 +19,5 @@ lint-all-fix:
 	golangci-lint run -c .golangci.all.yaml --fix ./...
 
 fmt-all:
+	golangci-lint run --no-config -E wsl_v5 --fix ./...
 	golangci-lint fmt -c .golangci.all.yaml ./...

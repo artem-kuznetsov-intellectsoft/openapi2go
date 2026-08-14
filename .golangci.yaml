@@ -20,6 +20,7 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl # Deprecated (replaced by wsl_v5)
+    - wsl_v5
 
   exclusions:
     paths:
