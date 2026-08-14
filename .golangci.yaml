@@ -27,9 +27,9 @@ linters:
           - wsl_v5
         text: "missing whitespace above this line"
     paths:
-      - cmd/parser
-      - cmd/validator
-      - cmd/validator-v2
+      - cmd/parser/
+      - cmd/validator/
+      - cmd/validator-v2/
       - generator/fixtures/
       - openapi/client_example.go
 
