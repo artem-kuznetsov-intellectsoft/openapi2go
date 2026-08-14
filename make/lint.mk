@@ -3,7 +3,7 @@
 # Default fallback directory if not specified on the command line
 DIR ?= ./...
 
-.PHONY: lint lint-new lint-fix fmt
+.PHONY: lint lint-new lint-fix fmt fmt-dry
 
 lint:
 	golangci-lint run $(DIR)
