@@ -1,4 +1,4 @@
-.PHONY: install test update-golden lint lint-all lint-all-fix fmt-all
+.PHONY: install test update-golden lint lint-new lint-fix fmt
 
 # Default fallback directory if not specified on the command line
 DIR ?= ./...
