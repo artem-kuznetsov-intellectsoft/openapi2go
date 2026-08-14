@@ -28,8 +28,7 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 
 ## Codebase navigation
 
-See @.claude/rules/LSP.md for LSP-based navigation guidance (use LSP tools instead of
-grep/Explore where possible).
+@.claude/rules/LSP.md
 
 ## Architecture
 

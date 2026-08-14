@@ -1,1 +1,1 @@
-/Users/artemkuznetsov/Projects/checker-knowledges/AI/Claude/CLAUDE.md collection/LSP - AI-driven.md
+/Users/artemkuznetsov/Projects/claude-settings/.claude/rules/LSP.v2.md
