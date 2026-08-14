@@ -41,7 +41,7 @@ linters:
       excludes:
         - G306 # Expect WriteFile permissions to be 0600 or less
     revive:
-      enable-default-rules: true # CRITICAL: Ensure general default checks are still run
+      enable-default-rules: true # Ensure general default checks are still run
 
 formatters:
   enable:
@@ -53,6 +53,3 @@ formatters:
         - github.com/artem-kuznetsov-intellectsoft/openapi2go
     gofumpt:
       extra-rules: true
-
-issues:
-  new: true

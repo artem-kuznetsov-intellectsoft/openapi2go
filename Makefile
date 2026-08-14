@@ -15,11 +15,11 @@ update-golden:
 lint:
 	golangci-lint run $(DIR)
 
-lint-all:
-	golangci-lint run -c .golangci.all.yaml $(DIR)
+lint-new:
+	golangci-lint run --new $(DIR)
 
-lint-all-fix:
-	golangci-lint run -c .golangci.all.yaml --fix $(DIR)
+lint-fix:
+	golangci-lint run --fix $(DIR)
 
-fmt-all:
-	golangci-lint fmt -c .golangci.all.yaml $(DIR)
+fmt:
+	golangci-lint fmt $(DIR)
