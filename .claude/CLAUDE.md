@@ -47,9 +47,9 @@ grep/Explore where possible).
 ## Testing pattern
 
 Generator tests (`generator/generator_test.go`) are golden-file tests: each case reads
-an input fixture OpenAPI document from `fixtures/<Case>/`, runs `Generate`, and diffs
+an input fixture OpenAPI document from `generator/fixtures/<Case>/`, runs `Generate`, and diffs
 (`go-cmp`) the result against a `generated.ref.go` file in the same directory. When adding a new
-generator behavior, add a new `fixtures/<Case>/` fixture pair rather than asserting inline —
+generator behavior, add a new `generator/fixtures/<Case>/` fixture pair rather than asserting inline —
 that's the existing convention.
 
 Client-generation coverage is wired up per-fixture via an opt-in `clientRefFile` field on the
