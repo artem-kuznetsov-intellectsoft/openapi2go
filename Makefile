@@ -1,4 +1,4 @@
-.PHONY: install test update-golden lint lint-all
+.PHONY: install test update-golden lint lint-all lint-all-fix
 
 install:
 	go install ./cmd/openapi2go
@@ -14,6 +14,9 @@ lint:
 
 lint-all:
 	golangci-lint run -c .golangci.all.yaml ./...
+
+lint-all-fix:
+	golangci-lint run -c .golangci.all.yaml --fix ./...
 
 fmt-all:
 	golangci-lint fmt -c .golangci.all.yaml ./...
