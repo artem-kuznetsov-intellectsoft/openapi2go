@@ -1,7 +1,6 @@
-.PHONY: install test update-golden lint lint-new lint-fix fmt
+.PHONY: install test update-golden
 
-# Default fallback directory if not specified on the command line
-DIR ?= ./...
+include make/lint.mk
 
 install:
 	go install ./cmd/openapi2go
@@ -11,15 +10,3 @@ test:
 
 update-golden:
 	UPDATE_GOLDEN=1 go test ./generator -run TestGenerate
-
-lint:
-	golangci-lint run $(DIR)
-
-lint-new:
-	golangci-lint run --new $(DIR)
-
-lint-fix:
-	golangci-lint run --fix $(DIR)
-
-fmt:
-	golangci-lint fmt $(DIR)
