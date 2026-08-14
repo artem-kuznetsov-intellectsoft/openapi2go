@@ -1,0 +1,1 @@
+/Users/artemkuznetsov/Projects/checker-knowledges/AI/Claude/CLAUDE.md collection/LSP - AI-driven.md

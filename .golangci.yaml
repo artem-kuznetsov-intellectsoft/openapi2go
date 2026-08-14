@@ -53,3 +53,6 @@ formatters:
         - github.com/artem-kuznetsov-intellectsoft/openapi2go
     gofumpt:
       extra-rules: true
+
+issues:
+  new: true
