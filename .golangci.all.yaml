@@ -10,7 +10,6 @@ linters:
     - godox
     - gomodguard # Deprecated (replaced by gomodguard_v2)
     - gomodguard_v2
-    - gosec
     - lll
     - nlreturn
     - noinlineerr
@@ -33,17 +32,16 @@ linters:
       - cmd/validator-v2/
       - generator/fixtures/
       - openapi/client_example.go
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
 
   settings:
     gosec:
       excludes:
-        - G306
-
-    revive:
-      enable-default-rules: true # CRITICAL: Prevents revive from disabling all other default rules
-      rules:
-        - name: package-comments
-          disabled: true
+        - G306 # Expect WriteFile permissions to be 0600 or less
 
 formatters:
   enable:
