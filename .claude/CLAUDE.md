@@ -26,88 +26,18 @@ Run the generator CLI directly:
 go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
 ```
 
-## Type-mapping rules
-
-@rules/type-mapping.md
-
-The above is the authoritative rule set for OpenAPI→Go type mapping. Treat it as binding
-whenever generating or reviewing generator behavior, not just as background reading.
-
-## Client-generation rules
-
-@rules/client-mapping.md
-
-The above is the authoritative rule set for OpenAPI paths → generated `client.go`. It's a
-separate concern from type-mapping.md (operation → Client method, not schema → Go type) but
-depends on it: every type name client.go references is reused verbatim from what
-type-mapping.md's rules already produced for the main generated file.
-
-## `omitzero` vs. `omitempty` rules
-
-@rules/omitzero-mapping.md
-
-The above refines one specific tag decision from type-mapping.md §2 (the required:false +
-nullable:false row): struct-typed fields must use `,omitzero` instead of `,omitempty`, since
-`encoding/json`'s `omitempty` never omits a struct Kind value. Implemented in
-`generator.buildField` via a third `isStruct` return value threaded through
-`resolveRefOrType`/`resolveSchemaType` and its per-schema-type helpers (see that file's
-"Implementation" section) and covered by the `fixtures/OmitZero/` golden-file case.
-
 ## Architecture
 
-- **`openapi/schema.go`** — the OpenAPI Object model. Anything that can be either an inline
-  object or a `$ref` string (schemas, parameters, responses, etc.) is wrapped in the generic
-  `RefOr[T]`, which has custom `MarshalJSON`/`UnmarshalJSON` to round-trip either form.
-- **`generator/generator.go`** — the actual OpenAPI→Go translation. A single
-  unexported `generator` struct accumulates `structDef`/`enumDef` entries while walking schemas,
-  then `render` emits source text that is passed through `go/format.Source` before being
-  returned. This is where the "Type-mapping rules" above are implemented; the notes below are
-  code-structure/implementation detail, not a restatement of what gets mapped to what:
-  - `sortedKeys` gives deterministic struct-field and top-level-schema iteration order (the
-    mapping rule this serves — alphabetical field order — is in type-mapping.md).
-  - `$ref` resolution is recursive and memoized via `generator.generated`/`resolveNamedType` —
-    each referenced schema is generated at most once, in the order first encountered.
-  - `unwrapRef` is the single place that recognizes both a direct `$ref` and the
-    `allOf`-wrapped-`$ref` nullable idiom (see type-mapping.md); it's called from both plain
-    property resolution and array-item resolution, so fixes there apply to both.
-  - `collectInlineProperties`/`buildFields` implement the `allOf` composition rules (embedding
-    vs. property-merge) from type-mapping.md.
-  - `discriminatedAlias` implements the two-member discriminated-`oneOf` → type-alias rule from
-    type-mapping.md, short-circuiting normal struct generation for schemas matching that shape.
-  - `registerParamsStruct` implements the operation-`parameters` → `<OperationId>Params` struct
-    rule from type-mapping.md; `resolveParameter` is its `$ref`-against-`components.parameters`
-    counterpart to `resolveNamedType`.
-  - `enumIndex` deduplicates enum type/const declarations by the resolved type name (see
-    type-mapping.md for how that name is derived) so a repeated enum shape emits once.
-  - `resolveRefOrType`/`resolveSchemaType` thread a third `isStruct` return value (via
-    `resolveScalarSchemaType` and its per-type helpers `resolveObjectSchemaType`/
-    `resolveStringSchemaType`/`resolveNumericSchemaType`) alongside the resolved Go type name and
-    its `nullable` bit; `buildField` uses `isStruct` to pick `,omitzero` over `,omitempty` — see
-    omitzero-mapping.md.
-  - `usesDateTime`/`usesDate`/`usesOneOf`/`usesDiscriminated` are generator-wide flags — set
-    whenever a field mapping requires it — that `Generate` uses to pick which of
-    `openapi.SupportFiles()` (`date.go`, `oneof.go`, `discriminated.go`, embedded verbatim from
-    this package via `openapi/support.go`) to return alongside the generated code, package
-    clause rewritten to the output package name, so `DateTime`/`Date`/`OneOf`/`Discriminated`
-    live in the output package instead of being imported from this module (see type-mapping.md
-    for which formats/keywords trigger each flag). `cmd/openapi2go` writes these files next to
-    `-o`'s output file; in stdout mode (no `-o`) it just lists their names on stderr.
-- **`generator/client.go`** — implements the "Client-generation rules" above. `walkOperation`
-  (in generator.go) builds one `clientMethodDef` per operation from the exact type names its
-  own Params/requestBody/response resolution calls return — `registerParamsStruct`,
-  `registerOperationRequestBody`, and `walkOperationResponses` all return the type name they
-  registered specifically so client.go generation can capture it without re-deriving anything.
-  `registerClientMethod` drops the method if the operation had no `operationId`; `renderClient`
-  emits the `Client` type plus one method per surviving `clientMethodDef`, or `""` if there were
-  none. `Generate`'s fourth return value is this rendered (and `go/format.Source`-formatted)
-  client code; `cmd/openapi2go` writes it as `client.go` next to `-o`'s output file (and, in
-  stdout mode, just notes that one could be generated).
-- **`cmd/openapi2go`** — the CLI entrypoint (`generate` subcommand). Note `reorderFlagsFirst`:
-  it hoists `-o`/`-pkg` in front of the positional spec path before calling `flag.Parse`, since
-  Go's `flag` package stops parsing at the first non-flag argument.
-- **`cmd/parser`, `cmd/validator`, `cmd/validator-v2`** — additional command-line tools in this
-  module. Read access to these directories is denied by this repo's local Claude settings
-  (`.claude/settings.local.json`) — do not attempt to reopen them if a read is blocked.
+- **`openapi/`** — the OpenAPI Object model (`schema.go`), used to unmarshal an OpenAPI 3.0.x
+  document into Go structs, plus small runtime support types (`date.go`, `oneof.go`,
+  `discriminated.go`) that generated code can copy for itself, and a reference client example
+  (`client_example.go`).
+- **`generator/`** — the OpenAPI→Go translation. `generator.go` handles struct/enum generation
+  from `components.schemas`; `client.go` handles generation of a `Client` type with one method
+  per operation from `spec.Paths`. `fixtures/` holds the golden-file test fixtures (see Testing
+  pattern below).
+- **`cmd/openapi2go`** — the CLI entrypoint (`generate` subcommand).
+- **`make/`** — Makefile includes (`lint.mk`), pulled in by the root `Makefile`.
 
 ## Testing pattern
 
@@ -115,28 +45,10 @@ Generator tests (`generator/generator_test.go`) are golden-file tests: each case
 an input fixture OpenAPI document from `fixtures/<Case>/`, runs `Generate`, and diffs
 (`go-cmp`) the result against a `generated.ref.go` file in the same directory. When adding a new
 generator behavior, add a new `fixtures/<Case>/` fixture pair rather than asserting inline —
-that's the existing convention. Nearly every `fixtures/` fixture is wired into `_test.go`
-(arrays, maps, polymorphism, oneOf/allOf composition, nullable fields, required vs optional,
-formats, etc.); `fixtures/GenericSchema/` is the one exception left unwired — a monolithic spec
-covering the same primitive/format/required scenarios plus `readOnly`/`writeOnly` (unmapped
-keywords — see type-mapping.md). Check before assuming a scenario is covered.
+that's the existing convention.
 
-Client-generation coverage (client-mapping.md) is wired up per-fixture via an opt-in
-`clientRefFile` field on the test table entry, separate from `refFile` — most fixtures leave it
-unset, so absence there doesn't imply the client generator was ever run against that fixture.
-When `clientRefFile` is set but the operation resolves to no client method at all (no
-`operationId` anywhere in the spec), the convention is to have **no** golden file on disk rather
-than an empty one — an empty `.go` file isn't valid Go and trips `gofmt -l .`/lint on the
-fixture tree, so a missing file is itself the "expect no client.go" assertion (`UPDATE_GOLDEN`
-removes a stale file instead of writing an empty one; the compare path treats a missing file as
-`""`). As of this writing, `Customer`, `CustomerPost`, `PathParameters`, and `BasePath` have
-`clientRefFile` wired up; other fixtures with operations (e.g. any others with a `paths` block)
-have not been checked yet and may or may not already generate correct client code.
-
-## `api/openapi.json`
-
-This is a large real-world spec. A hook blocks reading it directly with the `Read` tool
-("forbidden to prevent context window bloat") — use `jq` via Bash instead, e.g.
-`jq '.components.schemas | keys' api/openapi.json` or `jq -c '.components.schemas.Foo' api/openapi.json`.
-Several files under `api/` and `openapi/references/*.md` are also read-denied by local settings — expect
-this and route around it with `jq`/other tools rather than retrying the same read.
+Client-generation coverage is wired up per-fixture via an opt-in `clientRefFile` field on the
+test table entry, separate from `refFile` — most fixtures leave it unset. When a fixture's
+operation resolves to no client method at all, the convention is to have **no** golden file on
+disk rather than an empty one (`UPDATE_GOLDEN` removes a stale file instead of writing an empty
+one).
