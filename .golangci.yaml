@@ -28,7 +28,7 @@ linters:
       - cmd/validator/
       - cmd/validator-v2/
       - generator/fixtures/
-      - openapi/client_example.go
+      - '(.+)_example\.go'
     presets:
       - comments
       - common-false-positives
