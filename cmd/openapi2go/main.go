@@ -79,6 +79,7 @@ func reorderFlagsFirst(args []string, valuedFlags ...string) []string {
 	}
 
 	var flags, rest []string
+
 	for i := 0; i < len(args); i++ {
 		if isValuedFlag[args[i]] {
 			flags = append(flags, args[i])
@@ -108,7 +109,6 @@ func runGenerate(args []string) {
 
 	if output == "" {
 		writeGeneratedStdout(code, supportFiles, clientCode)
-
 		return
 	}
 
@@ -158,6 +158,7 @@ func writeGeneratedStdout(code string, supportFiles map[string]string, clientCod
 
 	if len(supportFiles) > 0 {
 		fmt.Fprintln(os.Stderr, "note: generated code needs the support types below; pass -o to also write them as files:")
+
 		for name := range supportFiles {
 			fmt.Fprintln(os.Stderr, " -", name)
 		}
