@@ -6,6 +6,7 @@ linters:
   disable:
     - depguard
     - exhaustruct
+    - funlen
     - godot
     - godox
     - gomodguard # Deprecated (replaced by gomodguard_v2)
