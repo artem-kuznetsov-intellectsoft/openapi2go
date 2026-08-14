@@ -24,7 +24,7 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 	}
 }
 
-// Hint for AI: will be named as PascalCase(operationId) 
+// Hint for AI: will be named as PascalCase(operationId)
 type CreateCustomerParams struct{}
 
 type CreateCustomerRequest struct{}
@@ -45,7 +45,7 @@ type Response500 struct{}
 
 func (r Response500) Error() string { return "" }
 
-// Hint for AI: 
+// Hint for AI:
 // CreateCustomer is a method accessing an endpoint
 // described by paths["/customer"].post of openapi spec.
 // Arguments `params` and `req` are present in a signature if openapi has them.

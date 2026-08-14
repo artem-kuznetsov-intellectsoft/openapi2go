@@ -71,7 +71,7 @@ func ValidateOASObject(doc *openapi3.OpenAPI) []string {
 func CollectReferences(doc *openapi3.OpenAPI) []RefOccurrence {
 	var occurrences []RefOccurrence
 
-	addRef := func(ref string, loc string) {
+	addRef := func(ref, loc string) {
 		if ref != "" {
 			occurrences = append(occurrences, RefOccurrence{Ref: ref, Location: loc})
 		}
@@ -357,7 +357,7 @@ func checkLocalRef(doc *openapi3.OpenAPI, ref string) error {
 }
 
 // checkExternalRef validates reference paths that reside outside the entry document (URLs or relative files).
-func checkExternalRef(ref string, baseDir string) error {
+func checkExternalRef(ref, baseDir string) error {
 	// 1. Check if it's a remote URL
 	if strings.HasPrefix(ref, "http://") || strings.HasPrefix(ref, "https://") {
 		_, err := url.Parse(ref)

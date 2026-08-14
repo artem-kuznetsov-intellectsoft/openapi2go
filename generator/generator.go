@@ -860,7 +860,7 @@ func (g *generator) render(pkgName string) string {
 // unwrapRef resolves a property value to a referenced schema name, handling
 // both a direct $ref and the common allOf-wrapped-single-$ref pattern used
 // to attach `nullable` to a reference in OpenAPI 3.0.
-func unwrapRef(ref *openapi.RefOr[*openapi.Schema]) (name string, nullable bool, ok bool) {
+func unwrapRef(ref *openapi.RefOr[*openapi.Schema]) (name string, nullable, ok bool) {
 	if ref.Ref != "" {
 		return lastPathSegment(ref.Ref), false, true
 	}

@@ -6,8 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 )
 
 func TestGenerate(t *testing.T) {
