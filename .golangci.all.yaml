@@ -8,18 +8,19 @@ linters:
     - exhaustruct
     - godot
     - godox
+    - gomodguard # Deprecated (replaced by gomodguard_v2)
+    - gomodguard_v2
     - gosec
     - lll
     - nlreturn
     - noinlineerr
+    - nonamedreturns
     - paralleltest
     - tagliatelle
     - testpackage
     - varnamelen
     - wrapcheck
     - wsl # Deprecated (replaced by wsl_v5)
-    - gomodguard # Deprecated (replaced by gomodguard_v2)
-    - gomodguard_v2
 
   exclusions:
     rules:
