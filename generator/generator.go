@@ -24,7 +24,7 @@ type enumDef struct {
 const goAny = "any"
 
 // oneOfMemberCount is the exact number of oneOf members that maps to
-// OneOf[A, B] (or its Discriminated[A, B] alias) — see type-mapping.md §2.
+// OneOf[A, B] (or its Discriminated[A, B] alias).
 const oneOfMemberCount = 2
 
 type fieldDef struct {
@@ -75,21 +75,35 @@ type pendingInlineStruct struct {
 	schema *openapi.Schema
 }
 
+// markGenerated reports whether name was already generated, recording it as
+// generated if not — the guard every resolve*/register* function uses to
+// memoize by name.
+func (g *generator) markGenerated(name string) bool {
+	if g.generated[name] {
+		return true
+	}
+	g.generated[name] = true
+
+	return false
+}
+
+// addStruct appends def to g.structs and indexes it by name.
+func (g *generator) addStruct(def *structDef) {
+	g.structs = append(g.structs, def)
+	g.structIndex[def.name] = def
+}
+
 // Generate renders Go source declaring one struct per schema under
-// components.schemas of spec, plus any enum types referenced by them, as
-// code. It also walks spec.Paths so request bodies and 4xx/5xx responses
-// are generated in operation order (ahead of the alphabetical
-// components.schemas pass) and error responses get an `Error() string`
-// method — see registerErrorResponse. It also returns supportFiles: any of
-// openapi.SupportFiles that code depends on (e.g. "date.go", when a
-// date/date-time field was generated), keyed by filename with their package
-// clause rewritten to pkgName. Callers write these alongside code's own
-// output file so the generated package defines DateTime, Date, OneOf, and
-// Discriminated itself rather than importing this module's openapi package.
-// The fourth return value, clientCode, is client.go's source: a Client type
-// with one method per operation that has an operationId (see
-// registerClientMethod/renderClient), built from the exact same type names
-// code declares. It is "" when spec has no such operation.
+// components.schemas of spec, plus any enum types referenced by them. It
+// also walks spec.Paths first so request bodies and 4xx/5xx responses render
+// in operation order ahead of the alphabetical components.schemas pass, and
+// error responses get an `Error() string` method (see registerErrorResponse).
+// supportFiles returns any of openapi.SupportFiles the generated code
+// depends on, with the package clause rewritten to pkgName so the caller's
+// output compiles without importing this module. clientCode is client.go's
+// source — a Client type with one method per operation that has an
+// operationId, built from the exact type names code declares — or "" if spec
+// has no such operation.
 func Generate(spec *openapi.OpenAPI, pkgName string) (string, map[string]string, string, error) {
 	g := &generator{
 		schemas:     map[string]*openapi.Schema{},
@@ -261,7 +275,7 @@ func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
 		return ""
 	}
 
-	requestType, _, _ := g.resolveRefOrType("requestBody", schema)
+	requestType := g.resolveRefOrType("requestBody", schema).typ
 	g.flushPendingInline()
 
 	return requestType
@@ -314,11 +328,11 @@ func (g *generator) registerOperationResponse(code string, resp *openapi.Respons
 	status, statusErr := strconv.Atoi(code)
 
 	if statusErr == nil && status >= minErrorStatus && status <= maxErrorStatus {
-		hasSchema := firstJSONSchema(resp.Content) != nil
-		typeName := g.registerErrorResponse(code, resp)
+		schema := firstJSONSchema(resp.Content)
+		typeName := g.registerErrorResponse(code, schema)
 		g.flushPendingInline()
 
-		return &clientErrorDef{code: code, typ: typeName, hasSchema: hasSchema}, ""
+		return &clientErrorDef{code: code, typ: typeName, hasSchema: schema != nil}, ""
 	}
 
 	typeName := g.registerInlineResponse(code, resp)
@@ -333,7 +347,7 @@ func (g *generator) registerOperationResponse(code string, resp *openapi.Respons
 
 // registerInlineResponse generates a type for a non-error (1xx/2xx/3xx, or
 // "default") response's schema when it's inline, mirroring requestBody
-// handling — see type-mapping.md §4. A schema that's a $ref (or
+// handling. A schema that's a $ref (or
 // allOf-wrapped nullable $ref) into components.schemas is left untouched
 // here: it has no inline content of its own to generate, so it's picked up
 // by the later alphabetical components.schemas pass instead, preserving the
@@ -350,7 +364,7 @@ func (g *generator) registerInlineResponse(code string, resp *openapi.Response) 
 		return name
 	}
 
-	typeName, _, _ := g.resolveRefOrType("Response"+toPascalCase(code), schema)
+	typeName := g.resolveRefOrType("Response"+toPascalCase(code), schema).typ
 
 	return typeName
 }
@@ -386,23 +400,20 @@ func (g *generator) registerParamsStruct(
 	}
 
 	name := toPascalCase(op.OperationID) + "Params"
-	if g.generated[name] {
+	if g.markGenerated(name) {
 		return name
 	}
-	g.generated[name] = true
 
 	fields := make([]fieldDef, 0, len(byName))
 	for _, paramName := range sortedKeys(byName) {
 		fields = append(fields, g.buildParamField(byName[paramName]))
 	}
 
-	def := &structDef{
+	g.addStruct(&structDef{
 		name:    name,
 		comment: fmt.Sprintf("%s is generated for operationId %s.", name, op.OperationID),
 		fields:  fields,
-	}
-	g.structs = append(g.structs, def)
-	g.structIndex[name] = def
+	})
 
 	return name
 }
@@ -430,7 +441,7 @@ func (g *generator) resolveParameter(ref *openapi.RefOr[*openapi.Parameter]) *op
 func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
 	typ := goAny
 	if param.Schema != nil {
-		typ, _, _ = g.resolveRefOrType(param.Name, param.Schema)
+		typ = g.resolveRefOrType(param.Name, param.Schema).typ
 	}
 
 	required := param.Required || param.In == "path"
@@ -448,18 +459,18 @@ func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
 // developer to fill in by hand.
 const errorTODOBody = `panic("TODO: define the output")`
 
-// registerErrorResponse generates the type for a 4xx/5xx response and gives
-// it an `Error() string` method: a schema-backed response resolves to its
-// named struct, while a response with no content synthesizes an empty
+// registerErrorResponse generates the type for a 4xx/5xx response's schema
+// (the first JSON media type's schema of its content, or nil if it has none)
+// and gives it an `Error() string` method: a schema-backed response resolves
+// to its named struct, while a nil schema synthesizes an empty
 // "Response<code>" struct. Both get the same errorTODOBody. Returns the
 // error type's Go name.
-func (g *generator) registerErrorResponse(code string, resp *openapi.Response) string {
-	schema := firstJSONSchema(resp.Content)
+func (g *generator) registerErrorResponse(code string, schema *openapi.RefOr[*openapi.Schema]) string {
 	if schema == nil {
 		return g.registerNoContentErrorResponse(code)
 	}
 
-	typeName, _, _ := g.resolveRefOrType("Response"+code, schema)
+	typeName := g.resolveRefOrType("Response"+code, schema).typ
 	if def, ok := g.structIndex[typeName]; ok && def.errorBody == "" {
 		def.errorBody = errorTODOBody
 	}
@@ -469,14 +480,11 @@ func (g *generator) registerErrorResponse(code string, resp *openapi.Response) s
 
 func (g *generator) registerNoContentErrorResponse(code string) string {
 	name := "Response" + code
-	if g.generated[name] {
+	if g.markGenerated(name) {
 		return name
 	}
-	g.generated[name] = true
 
-	def := &structDef{name: name, errorBody: errorTODOBody}
-	g.structs = append(g.structs, def)
-	g.structIndex[name] = def
+	g.addStruct(&structDef{name: name, errorBody: errorTODOBody})
 
 	return name
 }
@@ -498,41 +506,33 @@ func firstJSONSchema(content map[string]*openapi.MediaType) *openapi.RefOr[*open
 // resolved (referenced but not defined in the given spec) become an empty
 // struct stub.
 func (g *generator) resolveNamedType(name string) string {
-	if g.generated[name] {
+	if g.markGenerated(name) {
 		return name
 	}
-	g.generated[name] = true
 
 	schema, ok := g.schemas[name]
 	if !ok {
-		def := &structDef{name: name}
-		g.structs = append(g.structs, def)
-		g.structIndex[name] = def
+		g.addStruct(&structDef{name: name})
 
 		return name
 	}
 
 	if alias, ok := g.discriminatedAlias(name, schema); ok {
-		def := &structDef{
+		g.addStruct(&structDef{
 			name:    name,
 			comment: fmt.Sprintf("%s is generated from components.schemas.%s.", name, name),
 			alias:   alias,
-		}
-		g.structs = append(g.structs, def)
-		g.structIndex[name] = def
+		})
 		g.flushPendingInline()
 
 		return name
 	}
 
-	fields := g.buildFields(schema)
-	def := &structDef{
+	g.addStruct(&structDef{
 		name:    name,
 		comment: fmt.Sprintf("%s is generated from components.schemas.%s.", name, name),
-		fields:  fields,
-	}
-	g.structs = append(g.structs, def)
-	g.structIndex[name] = def
+		fields:  g.buildFields(schema),
+	})
 	g.flushPendingInline()
 
 	return name
@@ -557,8 +557,8 @@ func (g *generator) discriminatedAlias(name string, schema *openapi.Schema) (str
 		return "", false
 	}
 
-	typA, _, _ := g.resolveRefOrType(name, schema.OneOf[0])
-	typB, _, _ := g.resolveRefOrType(name, schema.OneOf[1])
+	typA := g.resolveRefOrType(name, schema.OneOf[0]).typ
+	typB := g.resolveRefOrType(name, schema.OneOf[1]).typ
 	g.usesDiscriminated = true
 
 	return fmt.Sprintf("Discriminated[%s, %s]", typA, typB), true
@@ -612,8 +612,9 @@ func (g *generator) collectInlineProperties(schema *openapi.Schema, c *fieldColl
 func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Schema], required bool) fieldDef {
 	goName := toPascalCase(propName)
 
-	typ, nullable, isStruct := g.resolveRefOrType(propName, ref)
-	if nullable && isPointerable(typ) {
+	rt := g.resolveRefOrType(propName, ref)
+	typ := rt.typ
+	if rt.nullable && isPointerable(typ) {
 		typ = "*" + typ
 	}
 
@@ -621,11 +622,10 @@ func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Sche
 	switch {
 	case required:
 		// present tag with no suffix
-	case !nullable && isStruct:
+	case !rt.nullable && rt.isStruct:
 		// encoding/json's omitempty never considers a struct value empty, so a
 		// non-pointer struct field (DateTime, Date, OneOf, a $ref/generated
-		// struct) needs omitzero's zero-value check instead — see
-		// omitzero-mapping.md.
+		// struct) needs omitzero's zero-value check instead.
 		tag += ",omitzero"
 	default:
 		tag += ",omitempty"
@@ -634,32 +634,41 @@ func (g *generator) buildField(propName string, ref *openapi.RefOr[*openapi.Sche
 	return fieldDef{name: goName, typ: typ, jsonTag: tag}
 }
 
+// resolvedType is what resolving a property/item/parameter schema to a Go
+// type produces: the type expression itself, whether it should be treated as
+// nullable (wrapped in a pointer), and whether it's a struct Kind value (as
+// opposed to scalar/enum/map/slice/any) — buildField needs isStruct to pick
+// between the ",omitzero" and ",omitempty" JSON tag suffix.
+type resolvedType struct {
+	typ      string
+	nullable bool
+	isStruct bool
+}
+
 // resolveRefOrType resolves the Go type for a property or array-item value
 // that may be a direct $ref, an allOf-wrapped nullable $ref, or an inline
-// schema. isStruct reports whether typ is a struct Kind value (as opposed to
-// a scalar, enum, map, slice, or any) — see omitzero-mapping.md for why
-// buildField needs this to pick the right JSON tag suffix.
-func (g *generator) resolveRefOrType(propName string, ref *openapi.RefOr[*openapi.Schema]) (string, bool, bool) {
+// schema.
+func (g *generator) resolveRefOrType(propName string, ref *openapi.RefOr[*openapi.Schema]) resolvedType {
 	if refName, refNullable, ok := unwrapRef(ref); ok {
-		return g.resolveNamedType(refName), refNullable, true
+		return resolvedType{typ: g.resolveNamedType(refName), nullable: refNullable, isStruct: true}
 	}
 
 	return g.resolveSchemaType(propName, ref.Value)
 }
 
-func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (string, bool, bool) {
+func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) resolvedType {
 	if schema == nil {
-		return goAny, false, false
+		return resolvedType{typ: goAny}
 	}
 
 	nullable := schema.Nullable
 
 	if len(schema.OneOf) == oneOfMemberCount {
-		typA, _, _ := g.resolveRefOrType(propName, schema.OneOf[0])
-		typB, _, _ := g.resolveRefOrType(propName, schema.OneOf[1])
+		typA := g.resolveRefOrType(propName, schema.OneOf[0]).typ
+		typB := g.resolveRefOrType(propName, schema.OneOf[1]).typ
 		g.usesOneOf = true
 
-		return fmt.Sprintf("OneOf[%s, %s]", typA, typB), nullable, true
+		return resolvedType{typ: fmt.Sprintf("OneOf[%s, %s]", typA, typB), nullable: nullable, isStruct: true}
 	}
 
 	// A schema whose only shape comes from a multi-member allOf (composition,
@@ -669,17 +678,16 @@ func (g *generator) resolveSchemaType(propName string, schema *openapi.Schema) (
 	// covers an inline object appearing this way as a property value, an
 	// array item, or an operation's requestBody/response schema.
 	if len(schema.AllOf) > 0 {
-		return g.resolveInlineObjectType(toPascalCase(propName), schema), nullable, true
+		return resolvedType{typ: g.resolveInlineObjectType(toPascalCase(propName), schema), nullable: nullable, isStruct: true}
 	}
 
-	typ, isStruct := g.resolveScalarSchemaType(propName, schema)
+	rt := g.resolveScalarSchemaType(propName, schema)
+	rt.nullable = nullable
 
-	return typ, nullable, isStruct
+	return rt
 }
 
-// resolveScalarSchemaType resolves every schema.Type case that isn't oneOf
-// or a multi-member allOf (already handled by resolveSchemaType above).
-func (g *generator) resolveScalarSchemaType(propName string, schema *openapi.Schema) (string, bool) {
+func (g *generator) resolveScalarSchemaType(propName string, schema *openapi.Schema) resolvedType {
 	switch schema.Type {
 	case "object":
 		return g.resolveObjectSchemaType(propName, schema)
@@ -689,15 +697,15 @@ func (g *generator) resolveScalarSchemaType(propName string, schema *openapi.Sch
 			itemType = g.resolveArrayItemType(propName, schema.Items)
 		}
 
-		return "[]" + itemType, false
+		return resolvedType{typ: "[]" + itemType}
 	case "string":
 		return g.resolveStringSchemaType(propName, schema)
 	case schemaTypeInteger, "number":
-		return resolveNumericSchemaType(schema), false
+		return resolvedType{typ: resolveNumericSchemaType(schema)}
 	case "boolean":
-		return "bool", false
+		return resolvedType{typ: "bool"}
 	default:
-		return goAny, false
+		return resolvedType{typ: goAny}
 	}
 }
 
@@ -720,43 +728,39 @@ func resolveNumericSchemaType(schema *openapi.Schema) string {
 	}
 }
 
-// resolveObjectSchemaType resolves the "object" case of resolveSchemaType: a
-// free-form map, a map with a typed value schema, or an inline named struct.
-func (g *generator) resolveObjectSchemaType(propName string, schema *openapi.Schema) (string, bool) {
+func (g *generator) resolveObjectSchemaType(propName string, schema *openapi.Schema) resolvedType {
 	if ref, ok := schema.AdditionalProperties.(*openapi.RefOr[*openapi.Schema]); ok && ref != nil {
-		valType, _, _ := g.resolveRefOrType(propName, ref)
+		valType := g.resolveRefOrType(propName, ref).typ
 
-		return "map[string]" + valType, false
+		return resolvedType{typ: "map[string]" + valType}
 	}
 
 	if len(schema.Properties) > 0 {
-		return g.resolveInlineObjectType(toPascalCase(propName), schema), true
+		return resolvedType{typ: g.resolveInlineObjectType(toPascalCase(propName), schema), isStruct: true}
 	}
 
-	return "map[string]any", false
+	return resolvedType{typ: "map[string]any"}
 }
 
-// resolveStringSchemaType resolves the "string" case of resolveSchemaType:
-// an enum, a date/date-time struct, a byte slice, or a plain string.
-func (g *generator) resolveStringSchemaType(propName string, schema *openapi.Schema) (string, bool) {
+func (g *generator) resolveStringSchemaType(propName string, schema *openapi.Schema) resolvedType {
 	if len(schema.Enum) > 0 {
 		enumName := toPascalCase(propName)
 		g.registerEnum(enumName, schema)
 
-		return enumName, false
+		return resolvedType{typ: enumName}
 	}
 
 	switch schema.Format {
 	case "date-time":
 		g.usesDateTime = true
-		return "DateTime", true
+		return resolvedType{typ: "DateTime", isStruct: true}
 	case "date":
 		g.usesDate = true
-		return "Date", true
+		return resolvedType{typ: "Date", isStruct: true}
 	case "byte":
-		return "[]byte", false
+		return resolvedType{typ: "[]byte"}
 	default:
-		return "string", false
+		return resolvedType{typ: "string"}
 	}
 }
 
@@ -774,9 +778,7 @@ func (g *generator) resolveArrayItemType(propName string, items *openapi.RefOr[*
 		return g.resolveInlineObjectType(toPascalCase(propName)+"Entry", items.Value)
 	}
 
-	typ, _, _ := g.resolveSchemaType(propName, items.Value)
-
-	return typ
+	return g.resolveSchemaType(propName, items.Value).typ
 }
 
 // resolveInlineObjectType generates (memoized) a named struct for an
@@ -784,10 +786,9 @@ func (g *generator) resolveArrayItemType(propName string, items *openapi.RefOr[*
 // Rendering is deferred until the struct that references it has been
 // emitted (see flushPendingInline).
 func (g *generator) resolveInlineObjectType(name string, schema *openapi.Schema) string {
-	if g.generated[name] {
+	if g.markGenerated(name) {
 		return name
 	}
-	g.generated[name] = true
 
 	g.pendingInline = append(g.pendingInline, &pendingInlineStruct{name: name, schema: schema})
 

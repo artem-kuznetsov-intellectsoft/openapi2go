@@ -29,12 +29,6 @@ Example:
 openapi2go generate api/openapi.json -o generated/models.go -pkg generated
 ```
 
-## Type-mapping rules
-
-The exact rules the generator follows when translating an OpenAPI schema into Go
-(field naming, nullability vs. `required`, enums, inline objects, arrays, `$ref`
-resolution, etc.) are documented in [`.claude/rules/type-mapping.md`](.claude/rules/type-mapping.md).
-
 ## Development
 
 ```sh
