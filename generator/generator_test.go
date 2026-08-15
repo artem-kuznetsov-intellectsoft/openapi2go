@@ -141,6 +141,12 @@ func TestGenerate(t *testing.T) {
 			refFile:       "fixtures/CustomerPost/generated.ref.go",
 			clientRefFile: "fixtures/CustomerPost/client.ref.go",
 		},
+		{
+			name:          "InlinedSchemas",
+			inputFile:     "fixtures/InlinedSchemas/InlinedSchemas.json",
+			refFile:       "fixtures/InlinedSchemas/generated.ref.go",
+			clientRefFile: "fixtures/InlinedSchemas/client.ref.go",
+		},
 	}
 
 	for _, tt := range tests {

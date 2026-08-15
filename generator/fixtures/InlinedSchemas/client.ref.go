@@ -19,17 +19,17 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
 }
 
-// CustomerControllerCreateCustomer is generated for operationId CustomerController_createCustomer.
-// It performs a post request against paths["/customer"] of the OpenAPI spec.
-func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req CustomerControllerCreateCustomerRequest) (*CustomerControllerCreateCustomerResponse201, error) {
+// GetUser is generated for operationId get-user.
+// It performs a get request against paths["/user"] of the OpenAPI spec.
+func (c *Client) GetUser(ctx context.Context, req GetUserRequest) (*GetUserResponse200, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
-	reqURL := fmt.Sprintf("%s/customer", c.baseURL)
+	reqURL := fmt.Sprintf("%s/user", c.baseURL)
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +47,7 @@ func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req Custo
 		return nil, err
 	}
 
-	switch httpResp.StatusCode {
-	case 400:
-		return nil, Response400{}
-	case 401:
-		return nil, Response401{}
-	}
-
-	var resp CustomerControllerCreateCustomerResponse201
+	var resp GetUserResponse200
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return nil, err
 	}

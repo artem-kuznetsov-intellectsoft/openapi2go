@@ -110,17 +110,13 @@ const (
 )
 
 type CustomerControllerCreateCustomerRequest struct {
-	RequestBody
-}
-
-type RequestBody struct {
 	ExternalId string `json:"externalId,omitempty"`
 	Name       string `json:"name,omitempty"`
 }
 
 type CustomerDetailCompanyResponseDto struct{}
 
-type Response201 struct {
+type CustomerControllerCreateCustomerResponse201 struct {
 	CustomerDetailCompanyResponseDto
 	Company Company       `json:"company,omitzero"`
 	Vibans  []VibansEntry `json:"vibans,omitempty"`

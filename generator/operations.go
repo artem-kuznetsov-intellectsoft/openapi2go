@@ -65,13 +65,11 @@ func (g *generator) walkOperation(
 	})
 }
 
-// registerOperationRequestBody generates op's requestBody schema, exactly
-// like registerInlineResponse does for a response, then wraps it in a
-// "<PascalCase(operationId)>Request" struct (registerRequestWrapper) so each
+// registerOperationRequestBody generates op's requestBody schema under the
+// name "<PascalCase(operationId)>Request" (registerRequestWrapper), so each
 // operation gets its own named request type instead of every operation
-// sharing the raw schema type. Returns the wrapper's Go type name ("" if op
-// has no requestBody, no content, or no operationId to name the wrapper
-// after).
+// sharing the raw schema type. Returns "" if op has no requestBody, no
+// content, or no operationId to name the type after.
 func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
 	if op.RequestBody == nil || op.RequestBody.Value == nil || op.OperationID == "" {
 		return ""
@@ -82,23 +80,31 @@ func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
 		return ""
 	}
 
-	return g.registerRequestWrapper(op.OperationID, func() string {
-		requestType := g.resolveRefOrType("requestBody", schema).typ
-		g.flushPendingInline()
-
-		return requestType
-	})
+	return g.registerRequestWrapper(op.OperationID, schema)
 }
 
-// registerRequestWrapper generates a "<PascalCase(operationId)>Request"
-// struct embedding the type resolveRequestType resolves. It reserves the
-// wrapper's position in g.structs before calling resolveRequestType, so the
-// wrapper renders ahead of the embedded schema type instead of after —
-// resolveRequestType (e.g. resolveRefOrType/resolveNamedType) generates that
-// type as a side effect of resolving it, which would otherwise land it in
-// g.structs first.
-func (g *generator) registerRequestWrapper(operationID string, resolveRequestType func() string) string {
+// registerRequestWrapper generates the Go type for a requestBody schema
+// under the name "<PascalCase(operationId)>Request", exactly mirroring the
+// $ref/inline distinction registerInlineResponse makes for a response: a
+// schema that's a $ref (or allOf-wrapped nullable $ref) into
+// components.schemas names a type worth keeping distinct from the
+// operation-specific wrapper, so the wrapper struct embeds it (its position
+// in g.structs is reserved before resolving the embedded type, so the
+// wrapper renders ahead of it rather than after). Any other, inline schema
+// — an object literal, array, oneOf, or multi-member allOf composition, none
+// of which have a name of their own — has nothing worth keeping separate,
+// so its fields are generated directly under the wrapper's name instead.
+func (g *generator) registerRequestWrapper(operationID string, schema *openapi.RefOr[*openapi.Schema]) string {
 	name := toPascalCase(operationID) + "Request"
+
+	refName, _, isRef := unwrapRef(schema)
+	if !isRef {
+		g.resolveRefOrType(name, schema)
+		g.flushPendingInline()
+
+		return name
+	}
+
 	if g.markGenerated(name) {
 		return name
 	}
@@ -106,7 +112,7 @@ func (g *generator) registerRequestWrapper(operationID string, resolveRequestTyp
 	def := &structDef{name: name}
 	g.addStruct(def)
 
-	def.fields = []fieldDef{{typ: resolveRequestType(), embedded: true}}
+	def.fields = []fieldDef{{typ: g.resolveNamedType(refName), embedded: true}}
 
 	return name
 }
@@ -136,7 +142,7 @@ func (g *generator) walkOperationResponses(op *openapi.Operation) (string, []cli
 			continue
 		}
 
-		errDef, successType := g.registerOperationResponse(code, resp.Value)
+		errDef, successType := g.registerOperationResponse(op.OperationID, code, resp.Value)
 		if errDef != nil {
 			clientErrors = append(clientErrors, *errDef)
 			continue
@@ -154,7 +160,7 @@ func (g *generator) walkOperationResponses(op *openapi.Operation) (string, []cli
 // registerErrorResponse for 4xx/5xx, registerInlineResponse otherwise) and
 // classifies it for walkOperationResponses: a 4xx/5xx code returns a non-nil
 // errDef; a 2xx code with a schema returns its Go type name as successType.
-func (g *generator) registerOperationResponse(code string, resp *openapi.Response) (*clientErrorDef, string) {
+func (g *generator) registerOperationResponse(operationID, code string, resp *openapi.Response) (*clientErrorDef, string) {
 	status, statusErr := strconv.Atoi(code)
 
 	if statusErr == nil && status >= minErrorStatus && status <= maxErrorStatus {
@@ -165,7 +171,7 @@ func (g *generator) registerOperationResponse(code string, resp *openapi.Respons
 		return &clientErrorDef{code: code, typ: typeName, hasSchema: schema != nil}, ""
 	}
 
-	typeName := g.registerInlineResponse(code, resp)
+	typeName := g.registerInlineResponse(operationID, code, resp)
 	g.flushPendingInline()
 
 	if statusErr == nil && status >= minSuccessStatus && status <= maxSuccessStatus {
@@ -177,14 +183,17 @@ func (g *generator) registerOperationResponse(code string, resp *openapi.Respons
 
 // registerInlineResponse generates a type for a non-error (1xx/2xx/3xx, or
 // "default") response's schema when it's inline, mirroring requestBody
-// handling. A schema that's a $ref (or
+// handling (registerRequestWrapper). A schema that's a $ref (or
 // allOf-wrapped nullable $ref) into components.schemas is left untouched
 // here: it has no inline content of its own to generate, so it's picked up
 // by the later alphabetical components.schemas pass instead, preserving the
-// existing declaration order for named 2xx/3xx/default schemas. Returns the
-// response's Go type name in both cases (even though the $ref case doesn't
-// generate it here), or "" if resp has no schema at all.
-func (g *generator) registerInlineResponse(code string, resp *openapi.Response) string {
+// existing declaration order for named 2xx/3xx/default schemas. Any other,
+// inline schema has no name of its own worth keeping, so its fields are
+// generated directly under "<PascalCase(operationId)>Response<code>"
+// instead of a name shared across every operation's same-numbered response.
+// Returns the response's Go type name in both cases (even though the $ref
+// case doesn't generate it here), or "" if resp has no schema at all.
+func (g *generator) registerInlineResponse(operationID, code string, resp *openapi.Response) string {
 	schema := firstJSONSchema(resp.Content)
 	if schema == nil {
 		return ""
@@ -194,7 +203,8 @@ func (g *generator) registerInlineResponse(code string, resp *openapi.Response) 
 		return name
 	}
 
-	typeName := g.resolveRefOrType("Response"+toPascalCase(code), schema).typ
+	name := toPascalCase(operationID) + "Response" + toPascalCase(code)
+	typeName := g.resolveRefOrType(name, schema).typ
 
 	return typeName
 }

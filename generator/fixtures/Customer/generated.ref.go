@@ -10,7 +10,7 @@ type CustomerListCompanyResponseDto struct{}
 
 type CustomerListIndividualResponseDto struct{}
 
-type Response200 struct {
+type CustomerControllerGetAllCustomersResponse200 struct {
 	Customers  []OneOf[CustomerListCompanyResponseDto, CustomerListIndividualResponseDto] `json:"customers,omitempty"`
 	Pagination Pagination                                                                 `json:"pagination,omitzero"`
 }

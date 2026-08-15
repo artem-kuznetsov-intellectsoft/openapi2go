@@ -21,7 +21,7 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 
 // CustomerControllerGetAllCustomers is generated for operationId CustomerController_getAllCustomers.
 // It performs a get request against paths["/customer"] of the OpenAPI spec.
-func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params CustomerControllerGetAllCustomersParams) (*Response200, error) {
+func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params CustomerControllerGetAllCustomersParams) (*CustomerControllerGetAllCustomersResponse200, error) {
 	reqURL := fmt.Sprintf("%s/customer", c.baseURL)
 	q := url.Values{}
 	q.Set("limit", fmt.Sprint(params.Limit))
@@ -53,7 +53,7 @@ func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params C
 		return nil, Response401{}
 	}
 
-	var resp Response200
+	var resp CustomerControllerGetAllCustomersResponse200
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return nil, err
 	}
