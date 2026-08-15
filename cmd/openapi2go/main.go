@@ -22,11 +22,12 @@ const (
 )
 
 // Fixed names of the files openapi2go writes into the output directory.
-// Support-file names (e.g. date.go, oneof.go) aren't listed here: they come
-// from generator.Generate's supportFiles map, keyed by their own names.
+// Support-file names (e.g. date.gen.go, oneof.gen.go) aren't listed here:
+// they come from generator.Generate's supportFiles map, keyed by their own
+// names.
 const (
-	generatedFileName = "generated.go"
-	clientFileName    = "client.go"
+	generatedFileName = "types.gen.go"
+	clientFileName    = "client.gen.go"
 )
 
 var (

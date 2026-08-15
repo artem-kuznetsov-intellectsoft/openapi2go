@@ -187,7 +187,8 @@ func (g *generator) supportFiles(pkgName string) map[string]string {
 
 	files := make(map[string]string, len(names))
 	for _, name := range names {
-		files[name] = strings.Replace(source[name], "package openapi\n", "package "+pkgName+"\n", 1)
+		outName := strings.TrimSuffix(name, ".go") + ".gen.go"
+		files[outName] = strings.Replace(source[name], "package openapi\n", "package "+pkgName+"\n", 1)
 	}
 
 	return files

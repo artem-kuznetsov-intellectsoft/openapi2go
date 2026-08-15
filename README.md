@@ -21,7 +21,7 @@ openapi2go version
 ```
 
 - `-o` — output directory for the generated Go code (default: stdout); written as
-  `generated.go`, plus `client.go` and any support files (e.g. `date.go`) as needed
+  `types.gen.go`, plus `client.gen.go` and any support files (e.g. `date.gen.go`) as needed
 - `-pkg` — package name for the generated Go code (default: `generated`)
 
 Example:
