@@ -1,0 +1,28 @@
+package generated
+
+type Status string
+
+const (
+	StatusACTIVE   Status = "ACTIVE"
+	StatusINACTIVE Status = "INACTIVE"
+)
+
+// Alpha is generated from components.schemas.Alpha.
+type Alpha struct {
+	Anything any    `json:"anything,omitempty"`
+	Meta     Meta   `json:"meta,omitzero"`
+	Status   Status `json:"status,omitempty"`
+}
+
+type Meta struct {
+	Note string `json:"note,omitempty"`
+}
+
+type BareName struct{}
+
+// Beta is generated from components.schemas.Beta.
+type Beta struct {
+	Legacy BareName `json:"legacy,omitzero"`
+	Meta   Meta     `json:"meta,omitzero"`
+	Status Status   `json:"status,omitempty"`
+}

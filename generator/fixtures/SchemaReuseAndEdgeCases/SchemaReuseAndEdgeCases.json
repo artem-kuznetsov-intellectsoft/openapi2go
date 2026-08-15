@@ -1,0 +1,51 @@
+{
+    "paths": {},
+    "components": {
+        "schemas": {
+            "Alpha": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "ACTIVE",
+                            "INACTIVE"
+                        ]
+                    },
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "note": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "anything": {}
+                }
+            },
+            "Beta": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "ACTIVE",
+                            "INACTIVE"
+                        ]
+                    },
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "note": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "legacy": {
+                        "$ref": "BareName"
+                    }
+                }
+            }
+        }
+    }
+}

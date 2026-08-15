@@ -153,6 +153,17 @@ func TestGenerate(t *testing.T) {
 			refFile:       "fixtures/EnumWithSpecialSymbols/types.gen.go",
 			clientRefFile: "fixtures/EnumWithSpecialSymbols/client.gen.go",
 		},
+		{
+			name:          "OperationEdgeCases",
+			inputFile:     "fixtures/OperationEdgeCases/OperationEdgeCases.json",
+			refFile:       "fixtures/OperationEdgeCases/types.gen.go",
+			clientRefFile: "fixtures/OperationEdgeCases/client.gen.go",
+		},
+		{
+			name:      "SchemaReuseAndEdgeCases",
+			inputFile: "fixtures/SchemaReuseAndEdgeCases/SchemaReuseAndEdgeCases.json",
+			refFile:   "fixtures/SchemaReuseAndEdgeCases/types.gen.go",
+		},
 	}
 
 	for _, tt := range tests {

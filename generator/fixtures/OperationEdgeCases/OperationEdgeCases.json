@@ -1,0 +1,170 @@
+{
+    "paths": {
+        "/resource/{id}": {
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/ApiKeyHeader"
+                },
+                {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "get": {
+                "operationId": "GetResource",
+                "parameters": [
+                    null,
+                    {
+                        "name": "X-Trace-Id",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "410": null,
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "ReplaceResource",
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "DeleteResource",
+                "responses": {
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "PatchResource",
+                "responses": {}
+            },
+            "options": {
+                "operationId": "OptionsResource",
+                "responses": {}
+            },
+            "head": {
+                "operationId": "HeadResource",
+                "responses": {}
+            },
+            "trace": {
+                "operationId": "TraceResource",
+                "responses": {}
+            }
+        },
+        "/broken{template": {
+            "get": {
+                "operationId": "BrokenTemplate",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/void": null,
+        "/nodata": {
+            "post": {
+                "operationId": "PostNoData",
+                "requestBody": {
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/anonymous": {
+            "post": {
+                "parameters": [
+                    {
+                        "name": "filter",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "note": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "ok": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "parameters": {
+            "ApiKeyHeader": {
+                "name": "X-Api-Key",
+                "in": "header",
+                "required": true,
+                "schema": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
