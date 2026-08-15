@@ -63,19 +63,36 @@ func toPascalCase(s string) string {
 	return b.String()
 }
 
-// capitalizeFirst upper-cases the first rune of s, leaving the rest as-is —
-// used to turn enum values like "aggressive" into valid, exported const
-// name suffixes without disturbing already-uppercase values like
-// "PENDING_VERIFICATION".
+// capitalizeFirst turns an enum value into a valid, exported const name
+// suffix. Runs of letters/digits/underscores are left as-is (aside from
+// upper-casing the first rune of each), so plain values like "aggressive"
+// or already-uppercase "PENDING_VERIFICATION" pass through essentially
+// unchanged; any other rune (e.g. "/", "." in a MIME type like
+// "application/vnd.ms-excel") is treated as a word boundary and dropped,
+// with the next rune upper-cased instead.
 func capitalizeFirst(s string) string {
-	if s == "" {
-		return s
+	var b strings.Builder
+
+	upperNext := true
+	for _, r := range s {
+		if !isIdentifierRune(r) {
+			upperNext = true
+			continue
+		}
+
+		if upperNext {
+			b.WriteRune(unicode.ToUpper(r))
+			upperNext = false
+		} else {
+			b.WriteRune(r)
+		}
 	}
 
-	r := []rune(s)
-	r[0] = unicode.ToUpper(r[0])
+	return b.String()
+}
 
-	return string(r)
+func isIdentifierRune(r rune) bool {
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // describeSentence lowercases the first letter of a description and strips

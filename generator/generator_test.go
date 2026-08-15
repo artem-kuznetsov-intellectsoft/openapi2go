@@ -147,6 +147,12 @@ func TestGenerate(t *testing.T) {
 			refFile:       "fixtures/InlinedSchemas/generated.ref.go",
 			clientRefFile: "fixtures/InlinedSchemas/client.ref.go",
 		},
+		{
+			name:          "EnumWithSpecialSymbols",
+			inputFile:     "fixtures/EnumWithSpecialSymbols/EnumWithSpecialSymbols.json",
+			refFile:       "fixtures/EnumWithSpecialSymbols/generated.ref.go",
+			clientRefFile: "fixtures/EnumWithSpecialSymbols/client.ref.go",
+		},
 	}
 
 	for _, tt := range tests {

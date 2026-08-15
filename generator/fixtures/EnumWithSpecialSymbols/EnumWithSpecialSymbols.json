@@ -1,0 +1,62 @@
+{
+  "paths": {
+    "/document/upload-request": {
+      "post": {
+        "description": "Generates a presigned S3 PUT URL for the superclient to upload a document directly to S3. The document is linked to a company or individual. After uploading the file to the returned URL, call POST /document/:documentId/confirm to finalize.",
+        "operationId": "DocumentController_requestUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Document upload request with metadata",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": "string",
+                    "description": "Original filename (extension must match contentType)",
+                    "example": "registration-certificate.pdf"
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "description": "MIME type of the file",
+                    "enum": [
+                      "application/pdf",
+                      "image/jpeg",
+                      "image/png",
+                      "application/msword",
+                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                      "application/vnd.ms-excel",
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      "application/zip",
+                      "image/tiff",
+                      "image/webp",
+                      "image/bmp"
+                    ],
+                    "example": "application/pdf"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Document title (optional)",
+                    "maxLength": 255,
+                    "example": "Registration Certificate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Presigned upload URL generated"
+          }
+        },
+        "summary": "Request a presigned URL for document upload",
+        "tags": [
+          "Document"
+        ]
+      }
+    }
+  }
+}

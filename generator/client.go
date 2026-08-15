@@ -47,7 +47,7 @@ func (g *generator) renderClient(pkgName string) string {
 		return ""
 	}
 
-	usesJSON, usesBytes, usesURL := g.clientImports()
+	usesJSON, usesBytes, usesURL, usesIO := g.clientImports()
 
 	var b strings.Builder
 
@@ -62,7 +62,9 @@ func (g *generator) renderClient(pkgName string) string {
 		b.WriteString("\"encoding/json\"\n")
 	}
 	b.WriteString("\"fmt\"\n")
-	b.WriteString("\"io\"\n")
+	if usesIO {
+		b.WriteString("\"io\"\n")
+	}
 	b.WriteString("\"net/http\"\n")
 	if usesURL {
 		b.WriteString("\"net/url\"\n")
@@ -89,10 +91,9 @@ func (g *generator) renderClient(pkgName string) string {
 // clientImports reports which conditionally-needed packages client.go
 // requires: encoding/json (any request body, success response, or
 // schema-backed error needs marshal/unmarshal), bytes (a request body is
-// sent), and net/url (a query parameter is built).
-func (g *generator) clientImports() (bool, bool, bool) {
-	usesJSON, usesBytes, usesURL := false, false, false
-
+// sent), net/url (a query parameter is built), and io (respBody is read at
+// all — a success response or schema-backed error needs it).
+func (g *generator) clientImports() (usesJSON, usesBytes, usesURL, usesIO bool) {
 	for _, m := range g.clientMethods {
 		if m.requestType != "" {
 			usesBytes = true
@@ -101,10 +102,12 @@ func (g *generator) clientImports() (bool, bool, bool) {
 
 		if m.responseType != "" {
 			usesJSON = true
+			usesIO = true
 		}
 
-		for _, e := range m.errors {
-			usesJSON = usesJSON || e.hasSchema
+		if m.hasSchemaError() {
+			usesJSON = true
+			usesIO = true
 		}
 
 		for _, f := range g.paramsFields(m.paramsType) {
@@ -112,7 +115,7 @@ func (g *generator) clientImports() (bool, bool, bool) {
 		}
 	}
 
-	return usesJSON, usesBytes, usesURL
+	return usesJSON, usesBytes, usesURL, usesIO
 }
 
 // paramsFields returns the field list of paramsType's Params struct, or nil
@@ -146,10 +149,22 @@ func (g *generator) renderClientMethod(b *strings.Builder, m *clientMethodDef) {
 	errRet := clientErrRet(hasResp)
 
 	g.renderMethodSignature(b, m, hasResp)
-	g.renderRequestBuildAndSend(b, m, errRet)
+	g.renderRequestBuildAndSend(b, m, errRet, hasResp || m.hasSchemaError())
 	g.renderResponseHandling(b, m, hasResp, errRet)
 
 	b.WriteString("}\n\n")
+}
+
+// hasSchemaError reports whether any error case unmarshals respBody, i.e.
+// whether respBody is read at all.
+func (m *clientMethodDef) hasSchemaError() bool {
+	for _, e := range m.errors {
+		if e.hasSchema {
+			return true
+		}
+	}
+
+	return false
 }
 
 // renderMethodSignature writes the method's doc comment and its opening
@@ -175,8 +190,11 @@ func (g *generator) renderMethodSignature(b *strings.Builder, m *clientMethodDef
 }
 
 // renderRequestBuildAndSend writes everything from marshaling an optional
-// request body through reading the response body into respBody.
-func (g *generator) renderRequestBuildAndSend(b *strings.Builder, m *clientMethodDef, errRet func(string) string) {
+// request body through sending the request. needsRespBody controls whether
+// the response body is also read into a respBody local — skipped when
+// nothing downstream would reference it, which would otherwise leave an
+// unused variable.
+func (g *generator) renderRequestBuildAndSend(b *strings.Builder, m *clientMethodDef, errRet func(string) string, needsRespBody bool) {
 	if m.requestType != "" {
 		b.WriteString("body, err := json.Marshal(req)\n")
 		fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
@@ -198,6 +216,10 @@ func (g *generator) renderRequestBuildAndSend(b *strings.Builder, m *clientMetho
 
 	b.WriteString("httpResp, err := c.http.Do(httpReq)\n")
 	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\ndefer httpResp.Body.Close()\n\n", errRet("err"))
+
+	if !needsRespBody {
+		return
+	}
 
 	b.WriteString("respBody, err := io.ReadAll(httpResp.Body)\n")
 	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
