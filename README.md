@@ -16,17 +16,18 @@ go install github.com/artem-kuznetsov-intellectsoft/openapi2go/cmd/openapi2go
 ## Usage
 
 ```sh
-openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
+openapi2go generate <openapi-spec-path> [-o output-dir] [-pkg name]
 openapi2go version
 ```
 
-- `-o` — output file path for the generated Go code (default: stdout)
+- `-o` — output directory for the generated Go code (default: stdout); written as
+  `generated.go`, plus `client.go` and any support files (e.g. `date.go`) as needed
 - `-pkg` — package name for the generated Go code (default: `generated`)
 
 Example:
 
 ```sh
-openapi2go generate api/openapi.json -o generated/models.go -pkg generated
+openapi2go generate api/openapi.json -o generated -pkg generated
 ```
 
 ## Development

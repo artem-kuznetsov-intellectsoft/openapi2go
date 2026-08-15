@@ -23,12 +23,8 @@ gofmt -l .                                                                   # f
 Run the generator CLI directly:
 
 ```sh
-go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
+go run ./cmd/openapi2go generate <openapi-spec-path> [-o output-dir] [-pkg name]
 ```
-
-## Codebase navigation
-
-@.claude/rules/LSP.md
 
 ## Architecture
 

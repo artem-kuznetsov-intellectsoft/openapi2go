@@ -14,9 +14,20 @@ import (
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 )
 
-const usage = "usage: openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]\n       openapi2go version"
+const usage = "usage: openapi2go generate <openapi-spec-path> [-o output-dir] [-pkg name]\n       openapi2go version"
 
-const generatedFileMode = 0o644
+const (
+	generatedFileMode = 0o644
+	generatedDirMode  = 0o755
+)
+
+// Fixed names of the files openapi2go writes into the output directory.
+// Support-file names (e.g. date.go, oneof.go) aren't listed here: they come
+// from generator.Generate's supportFiles map, keyed by their own names.
+const (
+	generatedFileName = "generated.go"
+	clientFileName    = "client.go"
+)
 
 var (
 	errUsage          = errors.New(usage)
@@ -115,7 +126,7 @@ func reorderFlagsFirst(args []string, valuedFlags ...string) []string {
 }
 
 func runGenerate(args []string, stdout, stderr io.Writer) error {
-	output, pkg, specPath, err := parseGenerateFlags(args)
+	outputDir, pkg, specPath, err := parseGenerateFlags(args)
 	if err != nil {
 		return err
 	}
@@ -130,22 +141,22 @@ func runGenerate(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("failed to generate Go code: %w", err)
 	}
 
-	if output == "" {
+	if outputDir == "" {
 		writeGeneratedStdout(stdout, stderr, code, supportFiles, clientCode)
 		return nil
 	}
 
-	return writeGeneratedFiles(output, code, supportFiles, clientCode)
+	return writeGeneratedFiles(outputDir, code, supportFiles, clientCode)
 }
 
 // parseGenerateFlags parses the "generate" subcommand's flags and positional
 // spec-path argument. It never prints or exits itself: flag.ContinueOnError
 // with output discarded keeps callers in control of the single error-message
 // print site in run.
-func parseGenerateFlags(args []string) (output, pkg, specPath string, err error) {
+func parseGenerateFlags(args []string) (outputDir, pkg, specPath string, err error) {
 	fs := flag.NewFlagSet("generate", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	o := fs.String("o", "", "output file path for generated Go code (default: stdout)")
+	o := fs.String("o", "", "output directory for generated Go code (default: stdout)")
 	p := fs.String("pkg", "generated", "package name for generated Go code")
 
 	if err := fs.Parse(reorderFlagsFirst(args, "-o", "-pkg")); err != nil {
@@ -194,13 +205,16 @@ func writeGeneratedStdout(stdout, stderr io.Writer, code string, supportFiles ma
 }
 
 // writeGeneratedFiles writes the generated code, support files, and (if any)
-// client.go alongside output.
-func writeGeneratedFiles(output, code string, supportFiles map[string]string, clientCode string) error {
-	if err := os.WriteFile(output, []byte(code), generatedFileMode); err != nil {
+// client.go into dir, creating it if it doesn't already exist.
+func writeGeneratedFiles(dir, code string, supportFiles map[string]string, clientCode string) error {
+	if err := os.MkdirAll(dir, generatedDirMode); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, generatedFileName), []byte(code), generatedFileMode); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 
-	dir := filepath.Dir(output)
 	for name, content := range supportFiles {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), generatedFileMode); err != nil {
 			return fmt.Errorf("failed to write support file: %w", err)
@@ -208,7 +222,7 @@ func writeGeneratedFiles(output, code string, supportFiles map[string]string, cl
 	}
 
 	if clientCode != "" {
-		if err := os.WriteFile(filepath.Join(dir, "client.go"), []byte(clientCode), generatedFileMode); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, clientFileName), []byte(clientCode), generatedFileMode); err != nil {
 			return fmt.Errorf("failed to write client file: %w", err)
 		}
 	}
