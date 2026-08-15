@@ -36,10 +36,19 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output.go] [-pkg name]
   document into Go structs, plus small runtime support types (`date.go`, `oneof.go`,
   `discriminated.go`) that generated code can copy for itself, and a reference client example
   (`client_example.go`).
-- **`generator/`** — the OpenAPI→Go translation. `generator.go` handles struct/enum generation
-  from `components.schemas`; `client.go` handles generation of a `Client` type with one method
-  per operation from `spec.Paths`. `fixtures/` holds the golden-file test fixtures (see Testing
-  pattern below).
+- **`generator/`** — the OpenAPI→Go translation, split by responsibility:
+  - `generator.go` — core `generator` type and the `Generate` entrypoint; loads
+    `components`, orchestrates the walk/resolve/render passes.
+  - `operations.go` — walks `spec.Paths`, registering each operation's Params/requestBody/
+    response types (feeding `client.go`'s method generation) in path/method/status order.
+  - `schema.go` — the OpenAPI schema → Go type resolution core: struct fields, enums,
+    oneOf/discriminated unions, inline object/array types.
+  - `render.go` — renders resolved struct/enum definitions to Go source text.
+  - `naming.go` — string/identifier utilities (`toPascalCase`, `$ref` unwrapping, sorted-key
+    helpers, etc.) shared across the above.
+  - `client.go` — generation of a `Client` type with one method per operation that has an
+    `operationId`, built from the exact type names the walk/resolve passes declared.
+  - `fixtures/` — golden-file test fixtures (see Testing pattern below).
 - **`cmd/openapi2go`** — the CLI entrypoint (`generate` subcommand).
 - **`make/`** — Makefile includes (`lint.mk`), pulled in by the root `Makefile`.
 
