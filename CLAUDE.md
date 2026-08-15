@@ -52,7 +52,7 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output-dir] [-pkg name]
 
 Generator tests (`generator/generator_test.go`) are golden-file tests: each case reads
 an input fixture OpenAPI document from `generator/fixtures/<Case>/`, runs `Generate`, and diffs
-(`go-cmp`) the result against a `generated.ref.go` file in the same directory. When adding a new
+(`go-cmp`) the result against a `types.gen.go` file in the same directory. When adding a new
 generator behavior, add a new `generator/fixtures/<Case>/` fixture pair rather than asserting inline —
 that's the existing convention.
 

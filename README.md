@@ -41,6 +41,6 @@ gofmt -l .          # formatting check
 ```
 
 Generator tests are golden-file tests: each case in `generator/fixtures/<Case>/` pairs
-an input OpenAPI fixture with an expected `generated.ref.go`. See
+an input OpenAPI fixture with an expected `types.gen.go`. See
 [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for architecture notes and repo-specific
 conventions.
