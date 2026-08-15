@@ -139,11 +139,10 @@ func clientErrRet(hasResp bool) func(string) string {
 	return func(expr string) string { return expr }
 }
 
-// renderClientMethod emits one Client method for m, following the shape of
-// openapi/client_example.go: build the request URL (substituting path
-// parameters, appending query parameters), marshal a request body if there
-// is one, send it, then switch on the status code to return a typed error
-// or the unmarshaled success response.
+// renderClientMethod emits one Client method for m: build the request URL
+// (substituting path parameters, appending query parameters), marshal a
+// request body if there is one, send it, then switch on the status code to
+// return a typed error or the unmarshaled success response.
 func (g *generator) renderClientMethod(b *strings.Builder, m *clientMethodDef) {
 	hasResp := m.responseType != ""
 	errRet := clientErrRet(hasResp)

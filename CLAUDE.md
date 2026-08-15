@@ -30,8 +30,7 @@ go run ./cmd/openapi2go generate <openapi-spec-path> [-o output-dir] [-pkg name]
 
 - **`openapi/`** — the OpenAPI Object model (`schema.go`), used to unmarshal an OpenAPI 3.0.x
   document into Go structs, plus small runtime support types (`date.go`, `oneof.go`,
-  `discriminated.go`) that generated code can copy for itself, and a reference client example
-  (`client_example.go`).
+  `discriminated.go`) that generated code can copy for itself.
 - **`generator/`** — the OpenAPI→Go translation, split by responsibility:
   - `generator.go` — core `generator` type and the `Generate` entrypoint; loads
     `components`, orchestrates the walk/resolve/render passes.

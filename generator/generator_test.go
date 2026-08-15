@@ -164,6 +164,12 @@ func TestGenerate(t *testing.T) {
 			inputFile: "fixtures/SchemaReuseAndEdgeCases/SchemaReuseAndEdgeCases.json",
 			refFile:   "fixtures/SchemaReuseAndEdgeCases/types.gen.go",
 		},
+		{
+			name:          "ClientFullFeatureSet",
+			inputFile:     "fixtures/ClientFullFeatureSet/ClientFullFeatureSet.json",
+			refFile:       "fixtures/ClientFullFeatureSet/types.gen.go",
+			clientRefFile: "fixtures/ClientFullFeatureSet/client.gen.go",
+		},
 	}
 
 	for _, tt := range tests {
