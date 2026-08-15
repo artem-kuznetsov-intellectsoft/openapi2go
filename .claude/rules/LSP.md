@@ -1,1 +1,0 @@
-/Users/artemkuznetsov/Projects/claude-settings/.claude/rules/LSP.v2.md
