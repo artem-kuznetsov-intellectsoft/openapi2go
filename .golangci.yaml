@@ -9,7 +9,7 @@ linters:
     - funlen
     - godot
     - godox
-    - gomodguard # Deprecated (replaced by gomodguard_v2)
+    - gomodguard
     - gomodguard_v2
     - lll
     - nlreturn
@@ -20,7 +20,7 @@ linters:
     - testpackage
     - varnamelen
     - wrapcheck
-    - wsl # Deprecated (replaced by wsl_v5)
+    - wsl
     - wsl_v5
 
   exclusions:
