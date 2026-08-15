@@ -66,10 +66,14 @@ func (g *generator) walkOperation(
 }
 
 // registerOperationRequestBody generates op's requestBody schema, exactly
-// like registerInlineResponse does for a response, and returns its Go type
-// name ("" if op has no requestBody or content).
+// like registerInlineResponse does for a response, then wraps it in a
+// "<PascalCase(operationId)>Request" struct (registerRequestWrapper) so each
+// operation gets its own named request type instead of every operation
+// sharing the raw schema type. Returns the wrapper's Go type name ("" if op
+// has no requestBody, no content, or no operationId to name the wrapper
+// after).
 func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
-	if op.RequestBody == nil || op.RequestBody.Value == nil {
+	if op.RequestBody == nil || op.RequestBody.Value == nil || op.OperationID == "" {
 		return ""
 	}
 
@@ -78,10 +82,33 @@ func (g *generator) registerOperationRequestBody(op *openapi.Operation) string {
 		return ""
 	}
 
-	requestType := g.resolveRefOrType("requestBody", schema).typ
-	g.flushPendingInline()
+	return g.registerRequestWrapper(op.OperationID, func() string {
+		requestType := g.resolveRefOrType("requestBody", schema).typ
+		g.flushPendingInline()
 
-	return requestType
+		return requestType
+	})
+}
+
+// registerRequestWrapper generates a "<PascalCase(operationId)>Request"
+// struct embedding the type resolveRequestType resolves. It reserves the
+// wrapper's position in g.structs before calling resolveRequestType, so the
+// wrapper renders ahead of the embedded schema type instead of after —
+// resolveRequestType (e.g. resolveRefOrType/resolveNamedType) generates that
+// type as a side effect of resolving it, which would otherwise land it in
+// g.structs first.
+func (g *generator) registerRequestWrapper(operationID string, resolveRequestType func() string) string {
+	name := toPascalCase(operationID) + "Request"
+	if g.markGenerated(name) {
+		return name
+	}
+
+	def := &structDef{name: name}
+	g.addStruct(def)
+
+	def.fields = []fieldDef{{typ: resolveRequestType(), embedded: true}}
+
+	return name
 }
 
 // minErrorStatus/maxErrorStatus and minSuccessStatus/maxSuccessStatus bound

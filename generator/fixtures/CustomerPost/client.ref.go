@@ -21,7 +21,7 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 
 // CustomerControllerCreateCustomer is generated for operationId CustomerController_createCustomer.
 // It performs a post request against paths["/customer"] of the OpenAPI spec.
-func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req RequestBody) (*Response201, error) {
+func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req CustomerControllerCreateCustomerRequest) (*Response201, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err

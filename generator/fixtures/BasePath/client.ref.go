@@ -21,7 +21,7 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 
 // GetUser is generated for operationId get-user.
 // It performs a get request against paths["/user"] of the OpenAPI spec.
-func (c *Client) GetUser(ctx context.Context, req Request) (*ResponseOK, error) {
+func (c *Client) GetUser(ctx context.Context, req GetUserRequest) (*ResponseOK, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err

@@ -1,5 +1,9 @@
 package generated
 
+type GetUserRequest struct {
+	Request
+}
+
 // Request is generated from components.schemas.Request.
 type Request struct {
 	Age  int64  `json:"age,omitempty"`

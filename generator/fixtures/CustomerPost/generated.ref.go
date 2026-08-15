@@ -109,6 +109,10 @@ const (
 	DirectionBOTH    Direction = "BOTH"
 )
 
+type CustomerControllerCreateCustomerRequest struct {
+	RequestBody
+}
+
 type RequestBody struct {
 	ExternalId string `json:"externalId,omitempty"`
 	Name       string `json:"name,omitempty"`
