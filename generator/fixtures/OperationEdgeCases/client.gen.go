@@ -10,22 +10,37 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // BrokenTemplate is generated for operationId BrokenTemplate.
 // It performs a get request against paths["/broken{template"] of the OpenAPI spec.
-func (c *Client) BrokenTemplate(ctx context.Context) error {
+func (c *Client) BrokenTemplate(ctx context.Context, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/broken{template", c.baseURL)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)
@@ -39,12 +54,19 @@ func (c *Client) BrokenTemplate(ctx context.Context) error {
 
 // PostNoData is generated for operationId PostNoData.
 // It performs a post request against paths["/nodata"] of the OpenAPI spec.
-func (c *Client) PostNoData(ctx context.Context) error {
+func (c *Client) PostNoData(ctx context.Context, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/nodata", c.baseURL)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, nil)
 	if err != nil {
 		return err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)
@@ -58,7 +80,7 @@ func (c *Client) PostNoData(ctx context.Context) error {
 
 // GetResource is generated for operationId GetResource.
 // It performs a get request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) GetResource(ctx context.Context, params GetResourceParams) (*GetResourceResponse200, error) {
+func (c *Client) GetResource(ctx context.Context, params GetResourceParams, opts ...RequestOption) (*GetResourceResponse200, error) {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
@@ -70,6 +92,14 @@ func (c *Client) GetResource(ctx context.Context, params GetResourceParams) (*Ge
 	if params.XTraceId != nil {
 		httpReq.Header.Set("X-Trace-Id", fmt.Sprint(*params.XTraceId))
 	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, err
@@ -96,7 +126,7 @@ func (c *Client) GetResource(ctx context.Context, params GetResourceParams) (*Ge
 
 // ReplaceResource is generated for operationId ReplaceResource.
 // It performs a put request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) ReplaceResource(ctx context.Context, params ReplaceResourceParams) error {
+func (c *Client) ReplaceResource(ctx context.Context, params ReplaceResourceParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, reqURL, nil)
@@ -105,6 +135,14 @@ func (c *Client) ReplaceResource(ctx context.Context, params ReplaceResourcePara
 	}
 
 	httpReq.Header.Set("X-Api-Key", fmt.Sprint(params.XApiKey))
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return err
@@ -116,7 +154,7 @@ func (c *Client) ReplaceResource(ctx context.Context, params ReplaceResourcePara
 
 // DeleteResource is generated for operationId DeleteResource.
 // It performs a delete request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) DeleteResource(ctx context.Context, params DeleteResourceParams) error {
+func (c *Client) DeleteResource(ctx context.Context, params DeleteResourceParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, reqURL, nil)
@@ -125,6 +163,14 @@ func (c *Client) DeleteResource(ctx context.Context, params DeleteResourceParams
 	}
 
 	httpReq.Header.Set("X-Api-Key", fmt.Sprint(params.XApiKey))
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return err
@@ -141,7 +187,7 @@ func (c *Client) DeleteResource(ctx context.Context, params DeleteResourceParams
 
 // OptionsResource is generated for operationId OptionsResource.
 // It performs a options request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) OptionsResource(ctx context.Context, params OptionsResourceParams) error {
+func (c *Client) OptionsResource(ctx context.Context, params OptionsResourceParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodOptions, reqURL, nil)
@@ -150,6 +196,14 @@ func (c *Client) OptionsResource(ctx context.Context, params OptionsResourcePara
 	}
 
 	httpReq.Header.Set("X-Api-Key", fmt.Sprint(params.XApiKey))
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return err
@@ -161,7 +215,7 @@ func (c *Client) OptionsResource(ctx context.Context, params OptionsResourcePara
 
 // HeadResource is generated for operationId HeadResource.
 // It performs a head request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) HeadResource(ctx context.Context, params HeadResourceParams) error {
+func (c *Client) HeadResource(ctx context.Context, params HeadResourceParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodHead, reqURL, nil)
@@ -170,6 +224,14 @@ func (c *Client) HeadResource(ctx context.Context, params HeadResourceParams) er
 	}
 
 	httpReq.Header.Set("X-Api-Key", fmt.Sprint(params.XApiKey))
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return err
@@ -181,7 +243,7 @@ func (c *Client) HeadResource(ctx context.Context, params HeadResourceParams) er
 
 // PatchResource is generated for operationId PatchResource.
 // It performs a patch request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) PatchResource(ctx context.Context, params PatchResourceParams) error {
+func (c *Client) PatchResource(ctx context.Context, params PatchResourceParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, reqURL, nil)
@@ -190,6 +252,14 @@ func (c *Client) PatchResource(ctx context.Context, params PatchResourceParams) 
 	}
 
 	httpReq.Header.Set("X-Api-Key", fmt.Sprint(params.XApiKey))
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return err
@@ -201,7 +271,7 @@ func (c *Client) PatchResource(ctx context.Context, params PatchResourceParams) 
 
 // TraceResource is generated for operationId TraceResource.
 // It performs a trace request against paths["/resource/{id}"] of the OpenAPI spec.
-func (c *Client) TraceResource(ctx context.Context, params TraceResourceParams) error {
+func (c *Client) TraceResource(ctx context.Context, params TraceResourceParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/resource/%v", c.baseURL, params.Id)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodTrace, reqURL, nil)
@@ -210,6 +280,14 @@ func (c *Client) TraceResource(ctx context.Context, params TraceResourceParams) 
 	}
 
 	httpReq.Header.Set("X-Api-Key", fmt.Sprint(params.XApiKey))
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return err

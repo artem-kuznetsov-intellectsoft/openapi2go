@@ -11,17 +11,25 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // GetUserById is generated for operationId get-user-by-id.
 // It performs a get request against paths["/user/{userId}"] of the OpenAPI spec.
-func (c *Client) GetUserById(ctx context.Context, params GetUserByIdParams) (*ResponseOK, error) {
+func (c *Client) GetUserById(ctx context.Context, params GetUserByIdParams, opts ...RequestOption) (*ResponseOK, error) {
 	reqURL := fmt.Sprintf("%s/user/%v", c.baseURL, params.UserId)
 	q := url.Values{}
 	if params.MiddleName != nil {
@@ -34,6 +42,13 @@ func (c *Client) GetUserById(ctx context.Context, params GetUserByIdParams) (*Re
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)

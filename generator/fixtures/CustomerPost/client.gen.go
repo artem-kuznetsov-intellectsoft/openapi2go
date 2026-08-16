@@ -11,17 +11,25 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // CustomerControllerCreateCustomer is generated for operationId CustomerController_createCustomer.
 // It performs a post request against paths["/customer"] of the OpenAPI spec.
-func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req CustomerControllerCreateCustomerRequest) (*CustomerControllerCreateCustomerResponse201, error) {
+func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req CustomerControllerCreateCustomerRequest, opts ...RequestOption) (*CustomerControllerCreateCustomerResponse201, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -35,6 +43,13 @@ func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req Custo
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
 
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {

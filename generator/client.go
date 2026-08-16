@@ -73,12 +73,20 @@ func (g *generator) renderClient(pkgName string) string {
 
 	b.WriteString("type Client struct {\n")
 	b.WriteString("baseURL string\n")
-	b.WriteString("apiKey  string\n")
+	b.WriteString("opts    []RequestOption\n")
 	b.WriteString("http    *http.Client\n")
 	b.WriteString("}\n\n")
 
-	b.WriteString("func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {\n")
-	b.WriteString("return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}\n")
+	b.WriteString("type RequestOption interface {\n")
+	b.WriteString("Apply(*http.Request)\n")
+	b.WriteString("}\n\n")
+
+	b.WriteString("func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {\n")
+	b.WriteString("return &Client{\n")
+	b.WriteString("baseURL: baseURL,\n")
+	b.WriteString("opts:    opts,\n")
+	b.WriteString("http:    httpClient,\n")
+	b.WriteString("}\n")
 	b.WriteString("}\n\n")
 
 	for _, m := range g.clientMethods {
@@ -180,6 +188,7 @@ func (g *generator) renderMethodSignature(b *strings.Builder, m *clientMethodDef
 	if m.requestType != "" {
 		fmt.Fprintf(b, ", req %s", m.requestType)
 	}
+	b.WriteString(", opts ...RequestOption")
 
 	if hasResp {
 		fmt.Fprintf(b, ") (*%s, error) {\n", m.responseType)
@@ -213,6 +222,8 @@ func (g *generator) renderRequestBuildAndSend(b *strings.Builder, m *clientMetho
 		b.WriteString("httpReq.Header.Set(\"Content-Type\", \"application/json\")\n\n")
 	}
 
+	renderRequestOptions(b)
+
 	b.WriteString("httpResp, err := c.http.Do(httpReq)\n")
 	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\ndefer httpResp.Body.Close()\n\n", errRet("err"))
 
@@ -222,6 +233,14 @@ func (g *generator) renderRequestBuildAndSend(b *strings.Builder, m *clientMetho
 
 	b.WriteString("respBody, err := io.ReadAll(httpResp.Body)\n")
 	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
+}
+
+// renderRequestOptions emits the loops that apply both client-level (c.opts)
+// and per-call RequestOptions to httpReq, client-level first so a per-call
+// option can override it.
+func renderRequestOptions(b *strings.Builder) {
+	b.WriteString("\nfor _, o := range c.opts {\no.Apply(httpReq)\n}\n")
+	b.WriteString("for _, o := range opts {\no.Apply(httpReq)\n}\n\n")
 }
 
 // renderResponseHandling writes the 4xx/5xx status-code switch, then the

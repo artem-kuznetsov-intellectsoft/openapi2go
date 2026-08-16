@@ -11,17 +11,25 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // GetUser is generated for operationId get-user.
 // It performs a get request against paths["/user"] of the OpenAPI spec.
-func (c *Client) GetUser(ctx context.Context, req GetUserRequest) (*GetUserResponse200, error) {
+func (c *Client) GetUser(ctx context.Context, req GetUserRequest, opts ...RequestOption) (*GetUserResponse200, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -35,6 +43,13 @@ func (c *Client) GetUser(ctx context.Context, req GetUserRequest) (*GetUserRespo
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
 
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {

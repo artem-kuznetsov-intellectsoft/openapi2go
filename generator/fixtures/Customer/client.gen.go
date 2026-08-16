@@ -11,17 +11,25 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // CustomerControllerGetAllCustomers is generated for operationId CustomerController_getAllCustomers.
 // It performs a get request against paths["/customer"] of the OpenAPI spec.
-func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params CustomerControllerGetAllCustomersParams) (*CustomerControllerGetAllCustomersResponse200, error) {
+func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params CustomerControllerGetAllCustomersParams, opts ...RequestOption) (*CustomerControllerGetAllCustomersResponse200, error) {
 	reqURL := fmt.Sprintf("%s/customer", c.baseURL)
 	q := url.Values{}
 	q.Set("limit", fmt.Sprint(params.Limit))
@@ -35,6 +43,13 @@ func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params C
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)

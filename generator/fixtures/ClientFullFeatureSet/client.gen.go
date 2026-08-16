@@ -12,17 +12,25 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // ListItems is generated for operationId ListItems.
 // It performs a get request against paths["/items"] of the OpenAPI spec.
-func (c *Client) ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResponse200, error) {
+func (c *Client) ListItems(ctx context.Context, params ListItemsParams, opts ...RequestOption) (*ListItemsResponse200, error) {
 	reqURL := fmt.Sprintf("%s/items", c.baseURL)
 	q := url.Values{}
 	if params.Page != nil {
@@ -36,6 +44,13 @@ func (c *Client) ListItems(ctx context.Context, params ListItemsParams) (*ListIt
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)
@@ -59,7 +74,7 @@ func (c *Client) ListItems(ctx context.Context, params ListItemsParams) (*ListIt
 
 // CreateItem is generated for operationId CreateItem.
 // It performs a post request against paths["/items"] of the OpenAPI spec.
-func (c *Client) CreateItem(ctx context.Context, req CreateItemRequest) (*CreateItemResponse201, error) {
+func (c *Client) CreateItem(ctx context.Context, req CreateItemRequest, opts ...RequestOption) (*CreateItemResponse201, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -73,6 +88,13 @@ func (c *Client) CreateItem(ctx context.Context, req CreateItemRequest) (*Create
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
 
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
@@ -102,7 +124,7 @@ func (c *Client) CreateItem(ctx context.Context, req CreateItemRequest) (*Create
 
 // GetItem is generated for operationId GetItem.
 // It performs a get request against paths["/items/{itemId}"] of the OpenAPI spec.
-func (c *Client) GetItem(ctx context.Context, params GetItemParams) (*Item, error) {
+func (c *Client) GetItem(ctx context.Context, params GetItemParams, opts ...RequestOption) (*Item, error) {
 	reqURL := fmt.Sprintf("%s/items/%v", c.baseURL, params.ItemId)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
@@ -114,6 +136,14 @@ func (c *Client) GetItem(ctx context.Context, params GetItemParams) (*Item, erro
 	if params.XRequestId != nil {
 		httpReq.Header.Set("X-Request-Id", fmt.Sprint(*params.XRequestId))
 	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
+
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, err
@@ -146,7 +176,7 @@ func (c *Client) GetItem(ctx context.Context, params GetItemParams) (*Item, erro
 
 // ReplaceItem is generated for operationId ReplaceItem.
 // It performs a put request against paths["/items/{itemId}"] of the OpenAPI spec.
-func (c *Client) ReplaceItem(ctx context.Context, params ReplaceItemParams, req ReplaceItemRequest) (*ReplaceItemResponse200, error) {
+func (c *Client) ReplaceItem(ctx context.Context, params ReplaceItemParams, req ReplaceItemRequest, opts ...RequestOption) (*ReplaceItemResponse200, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -160,6 +190,13 @@ func (c *Client) ReplaceItem(ctx context.Context, params ReplaceItemParams, req 
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
 
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
@@ -191,12 +228,19 @@ func (c *Client) ReplaceItem(ctx context.Context, params ReplaceItemParams, req 
 
 // DeleteItem is generated for operationId DeleteItem.
 // It performs a delete request against paths["/items/{itemId}"] of the OpenAPI spec.
-func (c *Client) DeleteItem(ctx context.Context, params DeleteItemParams) error {
+func (c *Client) DeleteItem(ctx context.Context, params DeleteItemParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/items/%v", c.baseURL, params.ItemId)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, reqURL, nil)
 	if err != nil {
 		return err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)
@@ -224,12 +268,19 @@ func (c *Client) DeleteItem(ctx context.Context, params DeleteItemParams) error 
 
 // ArchiveItem is generated for operationId ArchiveItem.
 // It performs a patch request against paths["/items/{itemId}/archive"] of the OpenAPI spec.
-func (c *Client) ArchiveItem(ctx context.Context, params ArchiveItemParams) error {
+func (c *Client) ArchiveItem(ctx context.Context, params ArchiveItemParams, opts ...RequestOption) error {
 	reqURL := fmt.Sprintf("%s/items/%v/archive", c.baseURL, params.ItemId)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, reqURL, nil)
 	if err != nil {
 		return err
+	}
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
 	}
 
 	httpResp, err := c.http.Do(httpReq)

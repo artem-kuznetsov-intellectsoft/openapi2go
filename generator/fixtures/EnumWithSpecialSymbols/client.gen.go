@@ -10,17 +10,25 @@ import (
 
 type Client struct {
 	baseURL string
-	apiKey  string
+	opts    []RequestOption
 	http    *http.Client
 }
 
-func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
-	return &Client{baseURL: baseURL, apiKey: apiKey, http: httpClient}
+type RequestOption interface {
+	Apply(*http.Request)
+}
+
+func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {
+	return &Client{
+		baseURL: baseURL,
+		opts:    opts,
+		http:    httpClient,
+	}
 }
 
 // DocumentControllerRequestUpload is generated for operationId DocumentController_requestUpload.
 // It performs a post request against paths["/document/upload-request"] of the OpenAPI spec.
-func (c *Client) DocumentControllerRequestUpload(ctx context.Context, req DocumentControllerRequestUploadRequest) error {
+func (c *Client) DocumentControllerRequestUpload(ctx context.Context, req DocumentControllerRequestUploadRequest, opts ...RequestOption) error {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return err
@@ -34,6 +42,13 @@ func (c *Client) DocumentControllerRequestUpload(ctx context.Context, req Docume
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	for _, o := range c.opts {
+		o.Apply(httpReq)
+	}
+	for _, o := range opts {
+		o.Apply(httpReq)
+	}
 
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
