@@ -24,12 +24,6 @@ linters:
     - wsl_v5
 
   exclusions:
-    paths:
-      - cmd/parser/
-      - cmd/validator/
-      - cmd/validator-v2/
-      - generator/fixtures/
-      - '(.+)_example\.go'
     presets:
       - comments
       - common-false-positives
