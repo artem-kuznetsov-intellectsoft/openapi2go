@@ -19,6 +19,14 @@ func (d Date) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.Format(dateLayout))
 }
 
+// MarshalText renders the date as an RFC3339 full-date. Without it, the
+// MarshalText promoted from the embedded time.Time would render a Date as a
+// full timestamp wherever a text encoding is taken — which is how the client
+// runtime formats a date path or query parameter.
+func (d Date) MarshalText() ([]byte, error) {
+	return []byte(d.Format(dateLayout)), nil
+}
+
 // UnmarshalJSON parses an RFC3339 full-date string.
 func (d *Date) UnmarshalJSON(data []byte) error {
 	var s string

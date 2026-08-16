@@ -1,7 +1,10 @@
 package generator
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -19,13 +22,46 @@ type clientMethodDef struct {
 	requestType  string // "" if the operation has no request body.
 	responseType string // "" if the operation's success response has no schema.
 	errors       []clientErrorDef
+
+	// defaultErrorType is the Go type of the spec's "default" response, or ""
+	// if it declared none. It backs every non-2xx status no explicit case
+	// claimed — which is exactly what "default" means in OpenAPI.
+	defaultErrorType string
 }
 
 // clientErrorDef is one 4xx/5xx case in a client method's response switch.
+// Only schema-backed errors get a case at all: a content-less one needs no
+// arm, because expectSuccess already turns every non-2xx into an *APIError
+// carrying the status, headers, and body.
 type clientErrorDef struct {
 	code      string
 	typ       string
-	hasSchema bool // false for a content-less error response (no unmarshal).
+	hasSchema bool
+}
+
+// ErrReservedName reports a schema whose Go name collides with a declaration
+// the copied client runtime brings into the generated package.
+var ErrReservedName = errors.New("schema name is reserved by the client runtime")
+
+// ErrDuplicateMethod reports two operationIds that produce the same Go method
+// name.
+var ErrDuplicateMethod = errors.New("duplicate client method name")
+
+// reservedClientNames are the identifiers the copied client runtime declares
+// in the generated package. A spec whose components.schemas collides with one
+// of them would produce a duplicate declaration, so generation fails instead.
+//
+//nolint:gochecknoglobals // a fixed lookup table, not mutable state
+var reservedClientNames = map[string]bool{
+	"APIError":            true,
+	"Client":              true,
+	"ErrDecode":           true,
+	"ErrResponseTooLarge": true,
+	"HTTPResponse":        true,
+	"NewClient":           true,
+	"RequestOption":       true,
+	"WithBearerToken":     true,
+	"WithHeader":          true,
 }
 
 // registerClientMethod records m as a Client method, unless the operation it
@@ -39,91 +75,75 @@ func (g *generator) registerClientMethod(m *clientMethodDef) {
 	g.clientMethods = append(g.clientMethods, m)
 }
 
-// renderClient renders client.go: a Client type plus one method per
-// operation recorded by registerClientMethod. Returns "" if the spec had no
-// such operation, so callers know not to emit a client.go file at all.
-func (g *generator) renderClient(pkgName string) string {
-	if len(g.clientMethods) == 0 {
-		return ""
+// importSet collects the packages the rendered client methods actually
+// referenced. Recording an import at the point the code needing it is emitted
+// — rather than predicting it in a second pass over clientMethods, as an
+// earlier set of usesX booleans did — means a new emission site cannot forget
+// to widen a flag.
+type importSet map[string]bool
+
+func (s importSet) add(path string) { s[path] = true }
+
+func (s importSet) render(b *strings.Builder) {
+	b.WriteString("import (\n")
+	for _, path := range sortedKeys(s) {
+		fmt.Fprintf(b, "%q\n", path)
+	}
+	b.WriteString(")\n\n")
+}
+
+// renderClient renders client.go: one method per operation recorded by
+// registerClientMethod. The Client type itself, its options, and all of the
+// request/response plumbing come from the copied client runtime
+// (client_runtime.gen.go), not from here. Returns "" if the spec had no such
+// operation, so callers know not to emit a client.go file at all.
+func (g *generator) renderClient(pkgName string) (string, error) {
+	if !g.hasClient() {
+		return "", nil
 	}
 
-	usesJSON, usesBytes, usesURL, usesIO := g.clientImports()
+	if err := g.checkClientNames(); err != nil {
+		return "", err
+	}
+
+	// context and net/http appear in every method signature and request.
+	imports := importSet{"context": true, "net/http": true}
+
+	var methods strings.Builder
+	for _, m := range g.clientMethods {
+		g.renderClientMethod(&methods, m, imports)
+	}
 
 	var b strings.Builder
 
+	b.WriteString(generatedFileHeader)
 	fmt.Fprintf(&b, "package %s\n\n", pkgName)
+	imports.render(&b)
+	b.WriteString(methods.String())
 
-	b.WriteString("import (\n")
-	if usesBytes {
-		b.WriteString("\"bytes\"\n")
-	}
-	b.WriteString("\"context\"\n")
-	if usesJSON {
-		b.WriteString("\"encoding/json\"\n")
-	}
-	b.WriteString("\"fmt\"\n")
-	if usesIO {
-		b.WriteString("\"io\"\n")
-	}
-	b.WriteString("\"net/http\"\n")
-	if usesURL {
-		b.WriteString("\"net/url\"\n")
-	}
-	b.WriteString(")\n\n")
-
-	b.WriteString("type Client struct {\n")
-	b.WriteString("baseURL string\n")
-	b.WriteString("opts    []RequestOption\n")
-	b.WriteString("http    *http.Client\n")
-	b.WriteString("}\n\n")
-
-	b.WriteString("type RequestOption interface {\n")
-	b.WriteString("Apply(*http.Request)\n")
-	b.WriteString("}\n\n")
-
-	b.WriteString("func NewClient(baseURL string, httpClient *http.Client, opts ...RequestOption) *Client {\n")
-	b.WriteString("return &Client{\n")
-	b.WriteString("baseURL: baseURL,\n")
-	b.WriteString("opts:    opts,\n")
-	b.WriteString("http:    httpClient,\n")
-	b.WriteString("}\n")
-	b.WriteString("}\n\n")
-
-	for _, m := range g.clientMethods {
-		g.renderClientMethod(&b, m)
-	}
-
-	return b.String()
+	return b.String(), nil
 }
 
-// clientImports reports which conditionally-needed packages client.go
-// requires: encoding/json (any request body, success response, or
-// schema-backed error needs marshal/unmarshal), bytes (a request body is
-// sent), net/url (a query parameter is built), and io (respBody is read at
-// all — a success response or schema-backed error needs it).
-func (g *generator) clientImports() (usesJSON, usesBytes, usesURL, usesIO bool) {
-	for _, m := range g.clientMethods {
-		if m.requestType != "" {
-			usesBytes = true
-			usesJSON = true
-		}
-
-		if m.responseType != "" {
-			usesJSON = true
-			usesIO = true
-		}
-
-		if m.hasSchemaError() {
-			usesJSON = true
-			usesIO = true
-		}
-
-		for _, f := range g.paramsFields(m.paramsType) {
-			usesURL = usesURL || f.in == "query"
+// checkClientNames rejects a spec whose declared types or operation names
+// would collide with each other or with the client runtime, rather than
+// emitting Go that cannot compile.
+func (g *generator) checkClientNames() error {
+	for _, name := range sortedKeys(g.structIndex) {
+		if reservedClientNames[name] {
+			return fmt.Errorf("%w: rename %q in the spec", ErrReservedName, name)
 		}
 	}
 
-	return usesJSON, usesBytes, usesURL, usesIO
+	seen := make(map[string]string, len(g.clientMethods))
+	for _, m := range g.clientMethods {
+		if prev, ok := seen[m.name]; ok {
+			return fmt.Errorf("%w: operationIds %q and %q both produce %q",
+				ErrDuplicateMethod, prev, m.operationID, m.name)
+		}
+		seen[m.name] = m.operationID
+	}
+
+	return nil
 }
 
 // paramsFields returns the field list of paramsType's Params struct, or nil
@@ -147,31 +167,39 @@ func clientErrRet(hasResp bool) func(string) string {
 	return func(expr string) string { return expr }
 }
 
-// renderClientMethod emits one Client method for m: build the request URL
-// (substituting path parameters, appending query parameters), marshal a
-// request body if there is one, send it, then switch on the status code to
-// return a typed error or the unmarshaled success response.
-func (g *generator) renderClientMethod(b *strings.Builder, m *clientMethodDef) {
+// renderClientMethod emits one Client method for m: build the query and
+// header values, hand the request to the runtime's do, then dispatch on the
+// status code.
+func (g *generator) renderClientMethod(b *strings.Builder, m *clientMethodDef, imports importSet) {
 	hasResp := m.responseType != ""
 	errRet := clientErrRet(hasResp)
 
 	g.renderMethodSignature(b, m, hasResp)
-	g.renderRequestBuildAndSend(b, m, errRet, hasResp || m.hasSchemaError())
-	g.renderResponseHandling(b, m, hasResp, errRet)
+	fmt.Fprintf(b, "const op = %q\n\n", m.name)
+
+	g.renderQueryValues(b, m, imports)
+	g.renderHeaderValues(b, m)
+	g.renderCookieValues(b, m)
+	g.renderDoCall(b, m, errRet)
+	g.renderErrorCases(b, m, errRet)
+	renderSuccess(b, m, hasResp, errRet)
 
 	b.WriteString("}\n\n")
 }
 
-// hasSchemaError reports whether any error case unmarshals respBody, i.e.
-// whether respBody is read at all.
-func (m *clientMethodDef) hasSchemaError() bool {
+// schemaErrors returns the subset of m.errors that need a case in the
+// response switch. A content-less error response needs none: expectSuccess
+// turns it into an *APIError carrying its status, headers, and body, which is
+// strictly more than an empty marker struct could.
+func (m *clientMethodDef) schemaErrors() []clientErrorDef {
+	var out []clientErrorDef
 	for _, e := range m.errors {
 		if e.hasSchema {
-			return true
+			out = append(out, e)
 		}
 	}
 
-	return false
+	return out
 }
 
 // renderMethodSignature writes the method's doc comment and its opening
@@ -180,6 +208,15 @@ func (g *generator) renderMethodSignature(b *strings.Builder, m *clientMethodDef
 	fmt.Fprintf(b, "// %s is generated for operationId %s.\n", m.name, m.operationID)
 	fmt.Fprintf(b, "// It performs a %s request against paths[%q] of the OpenAPI spec.\n",
 		httpMethodLabel(m.httpMethod), m.path)
+
+	if codes := contentlessErrorCodes(m); len(codes) > 0 {
+		noun, verb := "responses", "return"
+		if len(codes) == 1 {
+			noun, verb = "response", "returns"
+		}
+		fmt.Fprintf(b, "// The spec documents error %s %s with no content; %s an *APIError.\n",
+			noun, strings.Join(codes, ", "), verb)
+	}
 
 	fmt.Fprintf(b, "func (c *Client) %s(ctx context.Context", m.name)
 	if m.paramsType != "" {
@@ -197,164 +234,210 @@ func (g *generator) renderMethodSignature(b *strings.Builder, m *clientMethodDef
 	}
 }
 
-// renderRequestBuildAndSend writes everything from marshaling an optional
-// request body through sending the request. needsRespBody controls whether
-// the response body is also read into a respBody local — skipped when
-// nothing downstream would reference it, which would otherwise leave an
-// unused variable.
-func (g *generator) renderRequestBuildAndSend(b *strings.Builder, m *clientMethodDef, errRet func(string) string, needsRespBody bool) {
-	if m.requestType != "" {
-		b.WriteString("body, err := json.Marshal(req)\n")
-		fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
-	}
-
-	g.renderRequestURL(b, m)
-
-	bodyExpr := "nil"
-	if m.requestType != "" {
-		bodyExpr = "bytes.NewReader(body)"
-	}
-	fmt.Fprintf(b, "httpReq, err := http.NewRequestWithContext(ctx, %s, reqURL, %s)\n", m.httpMethod, bodyExpr)
-	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
-
-	g.renderHeaderParams(b, m)
-	if m.requestType != "" {
-		b.WriteString("httpReq.Header.Set(\"Content-Type\", \"application/json\")\n\n")
-	}
-
-	renderRequestOptions(b)
-
-	b.WriteString("httpResp, err := c.http.Do(httpReq)\n")
-	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\ndefer httpResp.Body.Close()\n\n", errRet("err"))
-
-	if !needsRespBody {
-		return
-	}
-
-	b.WriteString("respBody, err := io.ReadAll(httpResp.Body)\n")
-	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
-}
-
-// renderRequestOptions emits the loops that apply both client-level (c.opts)
-// and per-call RequestOptions to httpReq, client-level first so a per-call
-// option can override it.
-func renderRequestOptions(b *strings.Builder) {
-	b.WriteString("\nfor _, o := range c.opts {\no.Apply(httpReq)\n}\n")
-	b.WriteString("for _, o := range opts {\no.Apply(httpReq)\n}\n\n")
-}
-
-// renderResponseHandling writes the 4xx/5xx status-code switch, then the
-// success path: unmarshal respBody into responseType and return it, or just
-// return nil when the operation has no success schema.
-func (g *generator) renderResponseHandling(
-	b *strings.Builder,
-	m *clientMethodDef,
-	hasResp bool,
-	errRet func(string) string,
-) {
-	if len(m.errors) > 0 {
-		b.WriteString("switch httpResp.StatusCode {\n")
-		for _, e := range m.errors {
-			g.renderErrorCase(b, e, errRet)
-		}
-		b.WriteString("}\n\n")
-	}
-
-	if !hasResp {
-		b.WriteString("return nil\n")
-		return
-	}
-
-	fmt.Fprintf(b, "var resp %s\n", m.responseType)
-	b.WriteString("if err := json.Unmarshal(respBody, &resp); err != nil {\nreturn nil, err\n}\n\n")
-	b.WriteString("return &resp, nil\n")
-}
-
-// renderErrorCase writes one "case <code>:" arm of the response switch: a
-// schema-backed error unmarshals respBody into its type first; a
-// content-less one just returns its zero value.
-func (g *generator) renderErrorCase(b *strings.Builder, e clientErrorDef, errRet func(string) string) {
-	fmt.Fprintf(b, "case %s:\n", e.code)
-
-	if !e.hasSchema {
-		fmt.Fprintf(b, "return %s\n", errRet(e.typ+"{}"))
-		return
-	}
-
-	fmt.Fprintf(b, "var errResp %s\n", e.typ)
-	b.WriteString("if err := json.Unmarshal(respBody, &errResp); err != nil {\n")
-	fmt.Fprintf(b, "return %s\n}\n", errRet("err"))
-	fmt.Fprintf(b, "return %s\n", errRet("errResp"))
-}
-
-// renderRequestURL emits the reqURL local variable: m.path with each
-// "{name}" path-parameter token substituted via fmt.Sprintf, followed by a
-// query string built from any "query"-located Params field. Path parameters
-// are always required (see buildParamField), so their field access is never
-// nil-guarded; a "query" field may be a pointer (optional), so those are.
-func (g *generator) renderRequestURL(b *strings.Builder, m *clientMethodDef) {
-	format, args := formatPathTemplate(m.path)
-
-	fmt.Fprintf(b, "reqURL := fmt.Sprintf(%q, c.baseURL", format)
-	for _, a := range args {
-		fmt.Fprintf(b, ", %s", a)
-	}
-	b.WriteString(")\n")
-
-	var queryFields []fieldDef
-	for _, f := range g.paramsFields(m.paramsType) {
-		if f.in == "query" {
-			queryFields = append(queryFields, f)
+// contentlessErrorCodes lists the documented error codes that get no case of
+// their own, so the doc comment can say where they went.
+func contentlessErrorCodes(m *clientMethodDef) []string {
+	var codes []string
+	for _, e := range m.errors {
+		if !e.hasSchema {
+			codes = append(codes, e.code)
 		}
 	}
 
-	if len(queryFields) > 0 {
-		b.WriteString("q := url.Values{}\n")
-		for _, f := range queryFields {
-			renderOptionalValueSet(b, "q.Set", f)
-		}
-		b.WriteString("if len(q) > 0 {\nreqURL += \"?\" + q.Encode()\n}\n")
+	return codes
+}
+
+// renderQueryValues emits the url.Values build-up for any "query"-located
+// Params field. A slice field uses Add per element, so an array parameter
+// becomes repeated keys rather than one "[a b c]".
+func (g *generator) renderQueryValues(b *strings.Builder, m *clientMethodDef, imports importSet) {
+	fields := paramsIn(g.paramsFields(m.paramsType), "query")
+	if len(fields) == 0 {
+		return
 	}
 
+	imports.add("net/url")
+	b.WriteString("query := url.Values{}\n")
+	for _, f := range fields {
+		renderValueSet(b, "query.Set", "query.Add", f)
+	}
 	b.WriteString("\n")
 }
 
-// renderHeaderParams emits httpReq.Header.Set calls for any "header"-located
-// Params field, after httpReq has been built.
-func (g *generator) renderHeaderParams(b *strings.Builder, m *clientMethodDef) {
-	for _, f := range g.paramsFields(m.paramsType) {
-		if f.in == "header" {
-			renderOptionalValueSet(b, "httpReq.Header.Set", f)
-		}
+// renderHeaderValues emits the http.Header build-up for any "header"-located
+// Params field.
+func (g *generator) renderHeaderValues(b *strings.Builder, m *clientMethodDef) {
+	fields := paramsIn(g.paramsFields(m.paramsType), "header")
+	if len(fields) == 0 {
+		return
 	}
+
+	b.WriteString("header := http.Header{}\n")
+	for _, f := range fields {
+		renderValueSet(b, "header.Set", "header.Add", f)
+	}
+	b.WriteString("\n")
 }
 
-// renderOptionalValueSet emits a call to setterExpr(f.paramName, <value>) for
-// Params field f, nil-guarding it first when f is a pointer (an optional
-// query/header parameter).
-func renderOptionalValueSet(b *strings.Builder, setterExpr string, f fieldDef) {
+// renderCookieValues emits the cookie slice for any "cookie"-located Params
+// field. These were previously resolved into the Params struct and then
+// silently dropped.
+func (g *generator) renderCookieValues(b *strings.Builder, m *clientMethodDef) {
+	fields := paramsIn(g.paramsFields(m.paramsType), "cookie")
+	if len(fields) == 0 {
+		return
+	}
+
+	b.WriteString("var cookies []*http.Cookie\n")
+	for _, f := range fields {
+		expr, guard := paramValueExpr(f)
+		if guard != "" {
+			fmt.Fprintf(b, "if %s {\n", guard)
+		}
+		fmt.Fprintf(b, "cookies = append(cookies, &http.Cookie{Name: %q, Value: formatValue(%s)})\n", f.paramName, expr)
+		if guard != "" {
+			b.WriteString("}\n")
+		}
+	}
+	b.WriteString("\n")
+}
+
+// paramsIn filters fields to those bound from the given parameter location.
+func paramsIn(fields []fieldDef, in string) []fieldDef {
+	var out []fieldDef
+	for _, f := range fields {
+		if f.in == in {
+			out = append(out, f)
+		}
+	}
+
+	return out
+}
+
+// paramValueExpr returns the expression yielding f's value, plus the
+// condition guarding it when f is an optional (pointer) parameter.
+func paramValueExpr(f fieldDef) (expr, guard string) {
 	if strings.HasPrefix(f.typ, "*") {
-		fmt.Fprintf(b, "if params.%s != nil {\n%s(%q, fmt.Sprint(*params.%s))\n}\n",
-			f.name, setterExpr, f.paramName, f.name)
+		return "*params." + f.name, "params." + f.name + " != nil"
+	}
+
+	return "params." + f.name, ""
+}
+
+// renderValueSet emits the setter call for one query or header parameter:
+// nil-guarded when the field is optional, and a loop using addExpr when it is
+// a slice, so repeated keys are produced rather than a Go slice rendering.
+func renderValueSet(b *strings.Builder, setExpr, addExpr string, f fieldDef) {
+	if strings.HasPrefix(f.typ, "[]") {
+		fmt.Fprintf(b, "for _, v := range params.%s {\n%s(%q, formatValue(v))\n}\n", f.name, addExpr, f.paramName)
 
 		return
 	}
 
-	fmt.Fprintf(b, "%s(%q, fmt.Sprint(params.%s))\n", setterExpr, f.paramName, f.name)
+	expr, guard := paramValueExpr(f)
+	if guard != "" {
+		fmt.Fprintf(b, "if %s {\n%s(%q, formatValue(%s))\n}\n", guard, setExpr, f.paramName, expr)
+
+		return
+	}
+
+	fmt.Fprintf(b, "%s(%q, formatValue(%s))\n", setExpr, f.paramName, expr)
 }
 
-// formatPathTemplate converts an OpenAPI path template into a fmt.Sprintf
-// format string (with a leading "%s" for c.baseURL) plus the "params.<Field>"
-// argument expressions for each "{name}" token, in the order they appear.
-func formatPathTemplate(path string) (string, []string) {
-	var out strings.Builder
-	var args []string
+// renderDoCall emits the single call into the runtime that sends the request.
+func (g *generator) renderDoCall(b *strings.Builder, m *clientMethodDef, errRet func(string) string) {
+	b.WriteString("resp, err := c.do(ctx, request{\n")
+	b.WriteString("op: op,\n")
+	fmt.Fprintf(b, "method: %s,\n", m.httpMethod)
+	fmt.Fprintf(b, "path: %s,\n", pathExpr(m.path, g.paramsFields(m.paramsType)))
 
-	out.WriteString("%s")
+	if len(paramsIn(g.paramsFields(m.paramsType), "query")) > 0 {
+		b.WriteString("query: query,\n")
+	}
+	if len(paramsIn(g.paramsFields(m.paramsType), "header")) > 0 {
+		b.WriteString("header: header,\n")
+	}
+	if len(paramsIn(g.paramsFields(m.paramsType), "cookie")) > 0 {
+		b.WriteString("cookies: cookies,\n")
+	}
+	if m.requestType != "" {
+		b.WriteString("body: req,\n")
+	}
+
+	b.WriteString("}, opts)\n")
+	fmt.Fprintf(b, "if err != nil {\nreturn %s\n}\n\n", errRet("err"))
+}
+
+// renderErrorCases emits the dispatch for documented error responses that
+// have a schema. Two or more get a switch; exactly one gets an if, which
+// keeps gocritic's singleCaseSwitch quiet.
+func (g *generator) renderErrorCases(b *strings.Builder, m *clientMethodDef, errRet func(string) string) {
+	errs := m.schemaErrors()
+
+	switch len(errs) {
+	case 0:
+		return
+	case 1:
+		fmt.Fprintf(b, "if resp.StatusCode == %s {\n", statusConst(errs[0].code))
+		fmt.Fprintf(b, "return %s\n}\n\n", errRet(decodeErrorExpr(errs[0].typ)))
+	default:
+		b.WriteString("switch resp.StatusCode {\n")
+		for _, e := range errs {
+			fmt.Fprintf(b, "case %s:\n", statusConst(e.code))
+			fmt.Fprintf(b, "return %s\n", errRet(decodeErrorExpr(e.typ)))
+		}
+		b.WriteString("}\n\n")
+	}
+}
+
+// decodeErrorExpr is the runtime call decoding one documented error payload.
+func decodeErrorExpr(typ string) string {
+	return "decodeError[" + typ + "](resp, op)"
+}
+
+// renderSuccess emits the 2xx gate and the success decode. The gate is what
+// makes an undocumented status — a 500, or a 4xx the spec never listed — an
+// error rather than a body decoded into the success type. When the spec
+// declares a "default" response, the gate decodes it instead of returning a
+// bare envelope.
+func renderSuccess(b *strings.Builder, m *clientMethodDef, hasResp bool, errRet func(string) string) {
+	gate := "resp.expectSuccess(op)"
+	if m.defaultErrorType != "" {
+		gate = fmt.Sprintf("expectSuccessDefault[%s](resp, op)", m.defaultErrorType)
+	}
+
+	if !hasResp {
+		fmt.Fprintf(b, "return %s\n", gate)
+
+		return
+	}
+
+	fmt.Fprintf(b, "if err := %s; err != nil {\nreturn %s\n}\n\n", gate, errRet("err"))
+	fmt.Fprintf(b, "return decodeJSON[%s](resp, op)\n", m.responseType)
+}
+
+// pathExpr converts an OpenAPI path template into a Go expression building
+// the request path: literal runs become quoted string constants and each
+// "{name}" token becomes pathParam(params.<Field>).
+//
+// Building the path by concatenation rather than fmt.Sprintf is what keeps a
+// literal "%" in a spec path from being read as a format verb, and routing
+// every substitution through pathParam is what escapes a value containing
+// "/", "?", or "#" instead of letting it retarget the request.
+func pathExpr(path string, fields []fieldDef) string {
+	var parts []string
+	var literal strings.Builder
+
+	flush := func() {
+		if literal.Len() > 0 {
+			parts = append(parts, strconv.Quote(literal.String()))
+			literal.Reset()
+		}
+	}
 
 	for i := 0; i < len(path); {
 		if path[i] != '{' {
-			out.WriteByte(path[i])
+			literal.WriteByte(path[i])
 			i++
 
 			continue
@@ -362,19 +445,89 @@ func formatPathTemplate(path string) (string, []string) {
 
 		end := strings.IndexByte(path[i:], '}')
 		if end == -1 {
-			out.WriteByte(path[i])
+			literal.WriteByte(path[i])
 			i++
 
 			continue
 		}
 
 		name := path[i+1 : i+end]
-		out.WriteString("%v")
-		args = append(args, "params."+toPascalCase(name))
+		if field, ok := pathFieldFor(fields, name); ok {
+			flush()
+			parts = append(parts, "pathParam(params."+field+")")
+		} else {
+			// No parameter declares this token, so there is no field to
+			// reference. Emitting params.<Name> anyway would produce code
+			// that does not compile; leaving the token literal at least
+			// yields a request the server can reject.
+			literal.WriteString(path[i : i+end+1])
+		}
+
 		i += end + 1
 	}
 
-	return out.String(), args
+	flush()
+
+	if len(parts) == 0 {
+		return `""`
+	}
+
+	return strings.Join(parts, " + ")
+}
+
+// pathFieldFor finds the Params field bound to a path parameter named name,
+// matching on the original parameter name that buildParamField recorded
+// rather than re-deriving the Go identifier, so the two cannot disagree.
+func pathFieldFor(fields []fieldDef, name string) (string, bool) {
+	for _, f := range fields {
+		if f.in == "path" && f.paramName == name {
+			return f.name, true
+		}
+	}
+
+	return "", false
+}
+
+// statusConst renders a status code as its net/http constant when one exists,
+// falling back to the numeric literal for codes the standard library does not
+// name.
+func statusConst(code string) string {
+	status, err := strconv.Atoi(code)
+	if err != nil {
+		return code
+	}
+
+	if name, ok := statusConstNames[status]; ok {
+		return name
+	}
+
+	return code
+}
+
+// statusConstNames maps each status code the generator emits a case for to
+// its net/http constant, so the generated switch reads in status names rather
+// than bare magic numbers. Codes absent here fall back to the literal.
+//
+//nolint:gochecknoglobals // a fixed lookup table, not mutable state
+var statusConstNames = map[int]string{
+	http.StatusBadRequest:          "http.StatusBadRequest",
+	http.StatusUnauthorized:        "http.StatusUnauthorized",
+	http.StatusPaymentRequired:     "http.StatusPaymentRequired",
+	http.StatusForbidden:           "http.StatusForbidden",
+	http.StatusNotFound:            "http.StatusNotFound",
+	http.StatusMethodNotAllowed:    "http.StatusMethodNotAllowed",
+	http.StatusNotAcceptable:       "http.StatusNotAcceptable",
+	http.StatusRequestTimeout:      "http.StatusRequestTimeout",
+	http.StatusConflict:            "http.StatusConflict",
+	http.StatusGone:                "http.StatusGone",
+	http.StatusPreconditionFailed:  "http.StatusPreconditionFailed",
+	http.StatusUnprocessableEntity: "http.StatusUnprocessableEntity",
+	http.StatusTooManyRequests:     "http.StatusTooManyRequests",
+	http.StatusInternalServerError: "http.StatusInternalServerError",
+	http.StatusNotImplemented:      "http.StatusNotImplemented",
+	http.StatusBadGateway:          "http.StatusBadGateway",
+	http.StatusServiceUnavailable:  "http.StatusServiceUnavailable",
+	http.StatusGatewayTimeout:      "http.StatusGatewayTimeout",
 }
 
 // httpMethodLabel turns an "http.Method*" constant expression into its

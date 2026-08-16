@@ -1,0 +1,130 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Client Status Dispatch",
+    "version": "1.0.0",
+    "description": "Covers the response-status shapes the client has to dispatch on: a 5xx with a schema, a default response, several 2xx codes on one operation, and an operation whose only documented failure is default."
+  },
+  "paths": {
+    "/reports": {
+      "get": {
+        "operationId": "ListReports",
+        "responses": {
+          "200": {
+            "description": "Reports",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reports": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Report" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerError" }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerError" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CreateReport",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Report" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing report returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Report" }
+              }
+            }
+          },
+          "201": {
+            "description": "Report created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Report" }
+              }
+            }
+          },
+          "default": {
+            "description": "Any other outcome",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{reportId}": {
+      "delete": {
+        "operationId": "DeleteReport",
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted, with a receipt",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Report" }
+              }
+            }
+          },
+          "204": {
+            "description": "Deleted, no content"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Report": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" }
+        }
+      },
+      "ServerError": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

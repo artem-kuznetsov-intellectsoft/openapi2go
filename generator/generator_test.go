@@ -12,10 +12,17 @@ import (
 )
 
 type goldenTestCase struct {
-	name          string
-	inputFile     string
-	refFile       string
-	clientRefFile string // "" skips the client.go comparison — see Customer's entry
+	name      string
+	inputFile string
+	refFile   string
+
+	// clientRefFile is where this fixture's client.gen.go lives. Leaving it
+	// unset asserts the spec generates no client at all, which is the right
+	// expectation for the schema-only fixtures — so it is a real assertion
+	// rather than a skip. When it is set but the file is absent, the fixture
+	// expects no client for a spec that does have paths (see Formats, whose
+	// operation has no operationId).
+	clientRefFile string
 }
 
 func TestGenerate(t *testing.T) {
@@ -93,9 +100,38 @@ func TestGenerate(t *testing.T) {
 			refFile:   "fixtures/PrimitivesAndFormats/types.gen.go",
 		},
 		{
+			name:          "ClientStatusDispatch",
+			inputFile:     "fixtures/ClientStatusDispatch/ClientStatusDispatch.json",
+			refFile:       "fixtures/ClientStatusDispatch/types.gen.go",
+			clientRefFile: "fixtures/ClientStatusDispatch/client.gen.go",
+		},
+		{
+			name:          "ClientParamStyles",
+			inputFile:     "fixtures/ClientParamStyles/ClientParamStyles.json",
+			refFile:       "fixtures/ClientParamStyles/types.gen.go",
+			clientRefFile: "fixtures/ClientParamStyles/client.gen.go",
+		},
+		{
+			// GenericSchema is the combined spec the single-schema fixtures
+			// above were split out of, kept as one integration golden over
+			// every schema shape at once.
+			name:      "GenericSchema",
+			inputFile: "fixtures/GenericSchema/generic-schema.openapi.json",
+			refFile:   "fixtures/GenericSchema/types.gen.go",
+		},
+		{
+			name:      "SecuritySchemas",
+			inputFile: "fixtures/SecuritySchemas/SecuritySchemas.json",
+			refFile:   "fixtures/SecuritySchemas/types.gen.go",
+		},
+		{
 			name:      "Formats",
 			inputFile: "fixtures/Formats/Formats.json",
 			refFile:   "fixtures/Formats/types.gen.go",
+			// Formats has a POST /example with no operationId. Opting it in
+			// makes the absent-file convention assert that such an operation
+			// produces no client method.
+			clientRefFile: "fixtures/Formats/client.gen.go",
 		},
 		{
 			name:      "Vehicle",
@@ -259,6 +295,10 @@ func compareGoldenFiles(t *testing.T, tt goldenTestCase, got string, supportFile
 	}
 
 	if tt.clientRefFile == "" {
+		if clientCode != "" {
+			t.Errorf("expected no client code for %s, got %d bytes", tt.name, len(clientCode))
+		}
+
 		return
 	}
 

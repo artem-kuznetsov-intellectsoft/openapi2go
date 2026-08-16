@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/artem-kuznetsov-intellectsoft/openapi2go/openapi"
 )
@@ -51,17 +52,18 @@ func (g *generator) walkOperation(
 ) {
 	paramsType := g.registerParamsStruct(op, pathParams)
 	requestType := g.registerOperationRequestBody(op)
-	responseType, clientErrors := g.walkOperationResponses(op)
+	responses := g.walkOperationResponses(op)
 
 	g.registerClientMethod(&clientMethodDef{
-		name:         toPascalCase(op.OperationID),
-		operationID:  op.OperationID,
-		httpMethod:   httpMethod,
-		path:         path,
-		paramsType:   paramsType,
-		requestType:  requestType,
-		responseType: responseType,
-		errors:       clientErrors,
+		name:             toPascalCase(op.OperationID),
+		operationID:      op.OperationID,
+		httpMethod:       httpMethod,
+		path:             path,
+		paramsType:       paramsType,
+		requestType:      requestType,
+		responseType:     responses.successType,
+		errors:           responses.errors,
+		defaultErrorType: responses.defaultType,
 	})
 }
 
@@ -127,14 +129,26 @@ const (
 	maxSuccessStatus = 299
 )
 
-// walkOperationResponses registers every response of op (error and
-// non-error alike, via registerErrorResponse/registerInlineResponse) and
-// reports the pieces a client method needs: the Go type name of the first
-// 2xx response with a schema (in status-code order), and every 4xx/5xx case
-// for the method's response switch.
-func (g *generator) walkOperationResponses(op *openapi.Operation) (string, []clientErrorDef) {
-	responseType := ""
-	var clientErrors []clientErrorDef
+// defaultResponseCode is the OpenAPI key for "every status not listed
+// explicitly", which the client uses as its non-2xx fallback.
+const defaultResponseCode = "default"
+
+// operationResponses is what a client method needs from op's responses.
+type operationResponses struct {
+	// successType is the Go type of the first 2xx response with a schema, in
+	// status-code order.
+	successType string
+	// errors is every 4xx/5xx case for the method's response switch.
+	errors []clientErrorDef
+	// defaultType is the Go type of the "default" response, or "".
+	defaultType string
+}
+
+// walkOperationResponses registers every response of op (error and non-error
+// alike, via registerErrorResponse/registerInlineResponse) and reports the
+// pieces a client method needs.
+func (g *generator) walkOperationResponses(op *openapi.Operation) operationResponses {
+	var out operationResponses
 
 	for _, code := range sortedKeys(op.Responses) {
 		resp := op.Responses[code]
@@ -142,18 +156,41 @@ func (g *generator) walkOperationResponses(op *openapi.Operation) (string, []cli
 			continue
 		}
 
-		errDef, successType := g.registerOperationResponse(op.OperationID, code, resp.Value)
-		if errDef != nil {
-			clientErrors = append(clientErrors, *errDef)
+		if code == defaultResponseCode {
+			out.defaultType = g.registerDefaultResponse(resp.Value)
+
 			continue
 		}
 
-		if responseType == "" && successType != "" {
-			responseType = successType
+		errDef, successType := g.registerOperationResponse(op.OperationID, code, resp.Value)
+		if errDef != nil {
+			out.errors = append(out.errors, *errDef)
+
+			continue
+		}
+
+		if out.successType == "" && successType != "" {
+			out.successType = successType
 		}
 	}
 
-	return responseType, clientErrors
+	return out
+}
+
+// registerDefaultResponse generates the type for a "default" response and
+// gives it an Error() method, since that is the role the client puts it in:
+// the payload for any status no explicit case claimed. Returns "" when the
+// response declares no schema, leaving the plain envelope as the fallback.
+func (g *generator) registerDefaultResponse(resp *openapi.Response) string {
+	schema := firstJSONSchema(resp.Content)
+	if schema == nil {
+		return ""
+	}
+
+	typeName := g.registerErrorResponse("Default", schema)
+	g.flushPendingInline()
+
+	return typeName
 }
 
 // registerOperationResponse registers one response code's schema (via
@@ -292,39 +329,79 @@ func (g *generator) buildParamField(param *openapi.Parameter) fieldDef {
 	return fieldDef{name: toPascalCase(param.Name), typ: typ, paramName: param.Name, in: param.In}
 }
 
-// errorTODOBody is the Error() method body for every 4xx/5xx response type:
-// the generator has no way to know what the correct output is (which field
-// of an arbitrary schema holds the error message, or what a content-less
-// response should report), so it always stubs the body out for the
-// developer to fill in by hand.
-const errorTODOBody = `panic("TODO: define the output")`
+// messageFieldNames are the JSON property names a schema is assumed to use
+// for a human-readable error message, in the order they are preferred.
+//
+//nolint:gochecknoglobals // a fixed lookup table, not mutable state
+var messageFieldNames = []string{"message", "error", "error_description", "detail", "title", "reason", "description"}
 
 // registerErrorResponse generates the type for a 4xx/5xx response's schema
-// (the first JSON media type's schema of its content, or nil if it has none)
-// and gives it an `Error() string` method: a schema-backed response resolves
-// to its named struct, while a nil schema synthesizes an empty
-// "Response<code>" struct. Both get the same errorTODOBody. Returns the
-// error type's Go name.
+// (the first JSON media type's schema of its content) and gives it an
+// `Error() string` method, returning the type's Go name.
+//
+// A response with no content gets no type at all: the client's expectSuccess
+// already turns any non-2xx into an *APIError carrying the status, headers,
+// and body, which is strictly more than an empty marker struct could report —
+// and a marker named after the status code alone would be shared by every
+// operation returning that status, so it could never discriminate between
+// them anyway. Returns "" in that case.
 func (g *generator) registerErrorResponse(code string, schema *openapi.RefOr[*openapi.Schema]) string {
 	if schema == nil {
-		return g.registerNoContentErrorResponse(code)
+		return ""
 	}
 
 	typeName := g.resolveRefOrType("Response"+code, schema).typ
 	if def, ok := g.structIndex[typeName]; ok && def.errorBody == "" {
-		def.errorBody = errorTODOBody
+		def.errorBody = errorBodyFor(def)
 	}
 
 	return typeName
 }
 
-func (g *generator) registerNoContentErrorResponse(code string) string {
-	name := "Response" + code
-	if g.markGenerated(name) {
-		return name
+// errorBodyFor builds the Error() method body for an error response type.
+// When the schema has a string field that reads like a message, that field is
+// the message; otherwise the fields are dumped.
+func errorBodyFor(def *structDef) string {
+	if field, ok := messageField(def.fields); ok {
+		return fmt.Sprintf("if r.%s != \"\" {\nreturn r.%s\n}\n\nreturn %q", field, field, def.name)
 	}
 
-	g.addStruct(&structDef{name: name, errorBody: errorTODOBody})
+	if len(def.fields) == 0 {
+		return fmt.Sprintf("return %q", def.name)
+	}
+
+	// The local defined type is load-bearing: %+v on a value that implements
+	// error would re-enter Error forever, which go vet rejects outright
+	// ("causes recursive (T).Error method call"). plain has an identical
+	// layout and no methods.
+	return fmt.Sprintf("type plain %s\n\nreturn fmt.Sprintf(%q, plain(r))", def.name, def.name+"%+v")
+}
+
+// goString is the Go type name a message field must have.
+const goString = "string"
+
+// messageField returns the name of the first string field whose JSON property
+// name reads like a human-readable error message.
+func messageField(fields []fieldDef) (string, bool) {
+	for _, want := range messageFieldNames {
+		for _, f := range fields {
+			if f.embedded || f.typ != goString {
+				continue
+			}
+
+			if strings.EqualFold(jsonFieldName(f.jsonTag), want) {
+				return f.name, true
+			}
+		}
+	}
+
+	return "", false
+}
+
+// jsonFieldName returns the property name part of a json struct tag value,
+// dropping any ",omitempty"-style options.
+func jsonFieldName(tag string) string {
+	name, _, _ := strings.Cut(tag, ",")
 
 	return name
 }

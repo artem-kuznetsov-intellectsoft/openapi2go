@@ -24,11 +24,37 @@ linters:
     - wsl_v5
 
   exclusions:
+    generated: lax
+
     presets:
       - comments
       - common-false-positives
       - legacy
       - std-error-handling
+
+    paths:
+      # Generated output. Anchored on .gen.go so the hand-written
+      # client_exec_test.go files in the same directories stay linted.
+      #
+      # The client runtime is copied whole into each generated package, so
+      # every package that uses only part of it reports the rest as unused —
+      # inherent to the mechanism, not a defect. The runtime is linted and
+      # tested at its source, openapi/clientruntime.
+      - generator/fixtures/.*\.gen\.go$
+
+    rules:
+      # Table-driven tests trip these by construction; the signal is not worth
+      # the noise in test code.
+      - path: _test\.go
+        linters:
+          - dupl
+          - err113
+          - goconst
+          - gochecknoglobals
+          - gosec
+          - maintidx
+          - mnd
+          - perfsprint
 
   settings:
     gosec:
