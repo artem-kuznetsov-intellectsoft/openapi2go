@@ -9,6 +9,10 @@ import (
 
 // DocumentControllerRequestUpload is generated for operationId DocumentController_requestUpload.
 // It performs a post request against paths["/document/upload-request"] of the OpenAPI spec.
+//
+// Request a presigned URL for document upload.
+//
+// Generates a presigned S3 PUT URL for the superclient to upload a document directly to S3. The document is linked to a company or individual. After uploading the file to the returned URL, call POST /document/:documentId/confirm to finalize.
 func (c *Client) DocumentControllerRequestUpload(ctx context.Context, req DocumentControllerRequestUploadRequest, opts ...RequestOption) error {
 	const op = "DocumentControllerRequestUpload"
 

@@ -64,6 +64,8 @@ func (g *generator) walkOperation(
 		responseType:     responses.successType,
 		errors:           responses.errors,
 		defaultErrorType: responses.defaultType,
+		summary:          op.Summary,
+		description:      op.Description,
 	})
 }
 

@@ -23,6 +23,12 @@ type clientMethodDef struct {
 	responseType string // "" if the operation's success response has no schema.
 	errors       []clientErrorDef
 
+	// summary and description are the operation's OpenAPI summary/description,
+	// or "" if the spec declared none. They render as their own paragraph in
+	// the method's doc comment, after the generated boilerplate lines.
+	summary     string
+	description string
+
 	// defaultErrorType is the Go type of the spec's "default" response, or ""
 	// if it declared none. It backs every non-2xx status no explicit case
 	// claimed — which is exactly what "default" means in OpenAPI.
@@ -205,18 +211,7 @@ func (m *clientMethodDef) schemaErrors() []clientErrorDef {
 // renderMethodSignature writes the method's doc comment and its opening
 // "func (c *Client) Name(...) ... {" line.
 func (g *generator) renderMethodSignature(b *strings.Builder, m *clientMethodDef, hasResp bool) {
-	fmt.Fprintf(b, "// %s is generated for operationId %s.\n", m.name, m.operationID)
-	fmt.Fprintf(b, "// It performs a %s request against paths[%q] of the OpenAPI spec.\n",
-		httpMethodLabel(m.httpMethod), m.path)
-
-	if codes := contentlessErrorCodes(m); len(codes) > 0 {
-		noun, verb := "responses", "return"
-		if len(codes) == 1 {
-			noun, verb = "response", "returns"
-		}
-		fmt.Fprintf(b, "// The spec documents error %s %s with no content; %s an *APIError.\n",
-			noun, strings.Join(codes, ", "), verb)
-	}
+	renderDocComment(b, methodDocLines(m))
 
 	fmt.Fprintf(b, "func (c *Client) %s(ctx context.Context", m.name)
 	if m.paramsType != "" {
@@ -232,6 +227,71 @@ func (g *generator) renderMethodSignature(b *strings.Builder, m *clientMethodDef
 	} else {
 		b.WriteString(") error {\n")
 	}
+}
+
+// methodDocLines builds the content of a method's doc comment as one string
+// per line, with "" standing for a blank separator line — the single source
+// every doc line (generated boilerplate or spec-sourced paragraph) goes
+// through before renderDocComment turns it into "// "-prefixed text.
+func methodDocLines(m *clientMethodDef) []string {
+	lines := []string{
+		fmt.Sprintf("%s is generated for operationId %s.", m.name, m.operationID),
+		fmt.Sprintf("It performs a %s request against paths[%q] of the OpenAPI spec.",
+			httpMethodLabel(m.httpMethod), m.path),
+	}
+
+	if codes := contentlessErrorCodes(m); len(codes) > 0 {
+		noun, verb := "responses", "return"
+		if len(codes) == 1 {
+			noun, verb = "response", "returns"
+		}
+		lines = append(lines, fmt.Sprintf("The spec documents error %s %s with no content; %s an *APIError.",
+			noun, strings.Join(codes, ", "), verb))
+	}
+
+	lines = append(lines, docParagraphLines(m.summary)...)
+	lines = append(lines, docParagraphLines(m.description)...)
+
+	return lines
+}
+
+// docParagraphLines turns spec-sourced text (a summary or description) into
+// doc-comment lines: a leading blank separator followed by one line per
+// input line, so it reads as its own paragraph rather than running on from
+// the boilerplate lines above it. Returns nil if text is "".
+func docParagraphLines(text string) []string {
+	text = ensureTrailingPeriod(text)
+	if text == "" {
+		return nil
+	}
+
+	return append([]string{""}, strings.Split(text, "\n")...)
+}
+
+// renderDocComment writes lines as a "// "-prefixed doc comment; an empty
+// line renders as a bare "//" rather than "// " with trailing whitespace.
+func renderDocComment(b *strings.Builder, lines []string) {
+	for _, line := range lines {
+		if line == "" {
+			b.WriteString("//\n")
+
+			continue
+		}
+
+		fmt.Fprintf(b, "// %s\n", line)
+	}
+}
+
+// ensureTrailingPeriod appends "." to text if it doesn't already end with
+// one, so a spec's summary/description reads as a complete sentence in the
+// generated doc comment regardless of how the spec author punctuated it.
+func ensureTrailingPeriod(text string) string {
+	text = strings.TrimRight(text, " \t\n")
+	if text == "" || strings.HasSuffix(text, ".") {
+		return text
+	}
+
+	return text + "."
 }
 
 // contentlessErrorCodes lists the documented error codes that get no case of

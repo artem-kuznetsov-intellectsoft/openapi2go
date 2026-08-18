@@ -11,6 +11,10 @@ import (
 // CustomerControllerGetAllCustomers is generated for operationId CustomerController_getAllCustomers.
 // It performs a get request against paths["/customer"] of the OpenAPI spec.
 // The spec documents error response 401 with no content; returns an *APIError.
+//
+// List of Customers created by Superclient.
+//
+// Retrieves a paginated list of Customers created by Superclient.
 func (c *Client) CustomerControllerGetAllCustomers(ctx context.Context, params CustomerControllerGetAllCustomersParams, opts ...RequestOption) (*CustomerControllerGetAllCustomersResponse200, error) {
 	const op = "CustomerControllerGetAllCustomers"
 

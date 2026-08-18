@@ -10,6 +10,10 @@ import (
 // GetUser is generated for operationId get-user.
 // It performs a get request against paths["/user"] of the OpenAPI spec.
 // The spec documents error response 404 with no content; returns an *APIError.
+//
+// This is a brief summary.
+//
+// This is a detailed description.
 func (c *Client) GetUser(ctx context.Context, req GetUserRequest, opts ...RequestOption) (*ResponseOK, error) {
 	const op = "GetUser"
 

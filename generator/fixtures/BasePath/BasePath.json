@@ -3,6 +3,8 @@
         "/user": {
             "get": {
                 "operationId": "get-user",
+                "description": "This is a detailed description",
+                "summary": "This is a brief summary.",
                 "requestBody": {
                     "content": {
                         "application/json": {

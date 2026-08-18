@@ -10,6 +10,10 @@ import (
 // CustomerControllerCreateCustomer is generated for operationId CustomerController_createCustomer.
 // It performs a post request against paths["/customer"] of the OpenAPI spec.
 // The spec documents error responses 400, 401 with no content; return an *APIError.
+//
+// Add new Customer - legal entity type (B2B).
+//
+// Add a legal-entity customer for completion through a prefilled KYB wizard. The customer remains pending and sanctions screening starts only after successful BiometrID verification.
 func (c *Client) CustomerControllerCreateCustomer(ctx context.Context, req CustomerControllerCreateCustomerRequest, opts ...RequestOption) (*CustomerControllerCreateCustomerResponse201, error) {
 	const op = "CustomerControllerCreateCustomer"
 
